@@ -3,6 +3,8 @@ import JacocoPlugin._
 
 name := "jdalvikvm"
 
+organization := "com.github.trugath"
+
 version := "0.8"
 
 scalaVersion := "2.10.4"
