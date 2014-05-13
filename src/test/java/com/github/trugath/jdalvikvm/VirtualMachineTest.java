@@ -44,8 +44,8 @@ public class VirtualMachineTest {
 
 	private static final String DX_JAR_FILE_PATH = "lib/dx.jar";
 
-    private static final String TEST_CLASSES_OUTPUT_PATH = "target/scala-2.10/test-classes";
-    private static final String SCOVERAGE_TEST_CLASSES_OUTPUT_PATH = "target/scala-2.10/scoverage-test-classes";
+    private static final String TEST_CLASSES_OUTPUT_PATH = "target/scala-2.11/test-classes";
+    private static final String SCOVERAGE_TEST_CLASSES_OUTPUT_PATH = "target/scala-2.11/scoverage-test-classes";
 
     @Test
     public void test0x2C() {
