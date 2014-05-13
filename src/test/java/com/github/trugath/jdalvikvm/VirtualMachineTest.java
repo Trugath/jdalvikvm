@@ -681,7 +681,7 @@ public class VirtualMachineTest {
 	}
 
 	private File getClassFilesRootDirectory() {
-		return new File(TEST_CLASSES_OUTPUT_PATH);
+		return new File(TEST_CLASSES_OUTPUT_PATH).getAbsoluteFile();
 	}
 
 	private String toClassFilePath(Class clazz) {
