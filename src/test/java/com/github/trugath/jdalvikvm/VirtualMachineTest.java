@@ -43,7 +43,9 @@ import org.apache.commons.lang.SystemUtils;
 public class VirtualMachineTest {
 
 	private static final String DX_JAR_FILE_PATH = "lib/dx.jar";
+
     private static final String TEST_CLASSES_OUTPUT_PATH = "target/scala-2.10/test-classes";
+    private static final String SCOVERAGE_TEST_CLASSES_OUTPUT_PATH = "target/scala-2.10/scoverage-test-classes";
 
     @Test
     public void test0x2C() {
@@ -681,7 +683,10 @@ public class VirtualMachineTest {
 	}
 
 	private File getClassFilesRootDirectory() {
-		return new File(TEST_CLASSES_OUTPUT_PATH).getAbsoluteFile();
+        if(new File(TEST_CLASSES_OUTPUT_PATH).exists())
+            return new File(TEST_CLASSES_OUTPUT_PATH).getAbsoluteFile();
+        else
+            return new File(SCOVERAGE_TEST_CLASSES_OUTPUT_PATH).getAbsoluteFile();
 	}
 
 	private String toClassFilePath(Class clazz) {
