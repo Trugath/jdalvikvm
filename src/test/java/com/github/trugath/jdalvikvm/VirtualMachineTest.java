@@ -42,8 +42,8 @@ import org.apache.commons.lang.SystemUtils;
 @RunWith(JUnit4.class)
 public class VirtualMachineTest {
 
-	private static final String DX_JAR_FILE_PATH = "lib\\dx.jar";
-    private static final String TEST_CLASSES_OUTPUT_PATH = "target\\scala-2.10\\test-classes";
+	private static final String DX_JAR_FILE_PATH = "lib/dx.jar";
+    private static final String TEST_CLASSES_OUTPUT_PATH = "target/scala-2.10/test-classes";
 
     @Test
     public void test0x2C() {
