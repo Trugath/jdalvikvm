@@ -10,6 +10,6 @@ jdk:
   - oraclejdk7
 
 scala:
-  - "2.10.4"
+  - "2.11.0"
 
-script: sbt coveralls
+script: sbt test
