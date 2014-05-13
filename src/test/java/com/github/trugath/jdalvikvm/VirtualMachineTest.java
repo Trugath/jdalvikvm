@@ -694,7 +694,7 @@ public class VirtualMachineTest {
 
 	private byte[] compile(File classesDirectory, String[] files) {
 		String[] cmdarray = new String[files.length + 5];
-		cmdarray[0] = "javaw";
+		cmdarray[0] = "java";
 		cmdarray[1] = "-jar";
 		cmdarray[2] = new File(DX_JAR_FILE_PATH).getAbsolutePath();
 		cmdarray[3] = "--dex";
