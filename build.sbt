@@ -1,5 +1,6 @@
-import de.johoop.jacoco4sbt._
-import JacocoPlugin._
+ScoverageSbtPlugin.instrumentSettings
+
+CoverallsPlugin.coverallsSettings
 
 name := "jdalvikvm"
 
@@ -12,8 +13,6 @@ scalaVersion := "2.10.4"
 scalacOptions := Seq("-unchecked", "-deprecation", "-feature", "-encoding", "UTF-8")
 
 javacOptions := Seq("-encoding", "UTF-8")
-
-jacoco.settings
 
 libraryDependencies += "junit" % "junit" % "4.10" % "test"
 
