@@ -52,6 +52,17 @@ final class Clazz {
 		return (isInterface ? "interface " : "class ") + getName();
 	}
 
+    Method getMethod(final String name, final String descriptor) {
+        try {
+            Method method = getDirectMethod(name, descriptor);
+            if(method == null)
+                method = getVirtualMethod(name, descriptor);
+            return method;
+        } catch(Exception e) {
+            return null;
+        }
+    }
+
 	Method getVirtualMethod(final String name, final String descriptor) {
 		Clazz current = this;
 		do {

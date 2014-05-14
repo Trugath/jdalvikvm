@@ -23,6 +23,8 @@
 
 package com.github.trugath.jdalvikvm;
 
+import scala.Predef$;
+
 import java.io.*;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
@@ -58,7 +60,7 @@ public class VirtualMachine {
 		Thread main = new Thread(this, "main");
 		try {
 			Frame frame = main.pushFrame();
-			frame.init(clazz.getDirectMethod("main", "([Ljava/lang/String;)V"));
+			frame.init(clazz.getMethod("main", "([Ljava/lang/String;)V"));
 			frame.intArgument(0, args);
 
 			main.start();
@@ -340,6 +342,17 @@ public class VirtualMachine {
 				}
 			}
 		}
+
+        if ("scala".equals(packageName)) {
+            if ("Predef$".equals(className)) {
+                if ("MODULE$".equals(fieldName)) {
+                    frame.objectRegisters[destination] = Predef$.MODULE$;
+                    frame.isObjectRegister[destination] = true;
+                    return true;
+                }
+            }
+        }
+
 		// }
 		// not CLDC classes but used in dex file
 		if ("java/lang".equals(packageName)) {
@@ -2070,6 +2083,15 @@ public class VirtualMachine {
                             return true;
                         } else {
                             return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                }
+                break;
+            case "scala":
+                switch (className) {
+                    case "Predef$":
+                        if ("println".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
+                            ((Predef$) toTargetInstance(frame.objectArguments[0])).println(frame.objectArguments[1]);
+                            return true;
                         }
                 }
                 break;

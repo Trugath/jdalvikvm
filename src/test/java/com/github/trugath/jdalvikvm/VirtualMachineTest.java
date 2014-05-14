@@ -48,6 +48,13 @@ public class VirtualMachineTest {
     private static final String SCOVERAGE_TEST_CLASSES_OUTPUT_PATH = "target/scala-2.11/scoverage-test-classes";
 
     @Test
+    public void testScalaBasic() {
+        runByClass(TestScalaBasic.class);
+
+        assertEquals("test", getLine());
+    }
+
+    @Test
     public void test0x2C() {
 		runByClass(Test0x2C.class);
 
