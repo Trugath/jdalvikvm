@@ -25,7 +25,7 @@ package com.github.trugath.jdalvikvm;
 
 final class Utils {
 	static void setLong(final int[] ints, final int offset, final long value) {
-		ints[offset] = (int)(value & 0xFFFFFFFF);
+		ints[offset] = (int)(value);
 		ints[offset + 1] = (int)(value >>> 32);
 	}
 

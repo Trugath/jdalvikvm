@@ -66,7 +66,7 @@ final class ClassLoader {
 
 	private final VirtualMachine vm;
 	private final Thread loadThread;
-	private final Hashtable classes = new Hashtable();
+	private final Hashtable<String,Clazz> classes = new Hashtable<>();
 
 	ClassLoader(final VirtualMachine vm) {
 		this.vm = vm;
@@ -106,7 +106,7 @@ final class ClassLoader {
 		return null;
 	}
 
-	private Object loadClassesMutex = new Object();
+	private final Object loadClassesMutex = new Object();
 	private byte[] dexFileContent;
 	private int offset;
 	private int[] oldOffset = new int[5];
@@ -202,11 +202,10 @@ final class ClassLoader {
 					readMethodContents(clazz, virtualMethods);
 
 					clazz.staticFields = staticFields;
-					clazz.staticFieldMap = new Hashtable();
-					for (int j = 0; j < staticFields.length; j++) {
-						Field field = staticFields[j];
-						clazz.staticFieldMap.put(field.name, field);
-					}
+					clazz.staticFieldMap = new Hashtable<>();
+                    for (Field field : staticFields) {
+                        clazz.staticFieldMap.put(field.name, field);
+                    }
 					clazz.instanceFields = instanceFields;
 					clazz.directMethods = directMethods;
 					clazz.virtualMethods = virtualMethods;
@@ -442,7 +441,7 @@ final class ClassLoader {
 		descriptors = new String[count];
 		pushOffset(readUInt());
 		for (int i = 0; i < count; i++) {
-			StringBuffer buffer = new StringBuffer();
+			StringBuilder buffer = new StringBuilder();
 			skip("shorty index", 4);
 			String returnType = types[readUInt()];
 
@@ -522,7 +521,7 @@ final class ClassLoader {
 		if (start == -1) {
 			return value;
 		}
-		StringBuffer returned = new StringBuffer();
+		StringBuilder returned = new StringBuilder();
 		int end = 0;
 		while (start != -1) {
 			returned.append(value.substring(end, start));

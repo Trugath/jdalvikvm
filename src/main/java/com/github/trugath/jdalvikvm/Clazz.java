@@ -37,7 +37,7 @@ final class Clazz {
 
 	Field[] instanceFields;
 	Field[] staticFields;
-	Hashtable staticFieldMap;
+	Hashtable<String,Field> staticFieldMap;
 
 	Method[] directMethods;
 	Method[] virtualMethods;
@@ -56,12 +56,11 @@ final class Clazz {
 		Clazz current = this;
 		do {
 			Method[] currentMethods = current.virtualMethods;
-			for (int i = 0, length = currentMethods.length; i < length; i++) {
-				Method method = currentMethods[i];
-				if (name.equals(method.name) && descriptor.equals(method.descriptor)) {
-					return method;
-				}
-			}
+            for (Method method : currentMethods) {
+                if (name.equals(method.name) && descriptor.equals(method.descriptor)) {
+                    return method;
+                }
+            }
 			current = classLoader.loadClass(current.superClass);
 		} while (current != null);
 		return null;
@@ -69,12 +68,11 @@ final class Clazz {
 
 	Method getDirectMethod(final String name, final String descriptor) {
 		Method[] currentMethods = directMethods;
-		for (int i = 0, length = currentMethods.length; i < length; i++) {
-			Method method = currentMethods[i];
-			if (name.equals(method.name) && descriptor.equals(method.descriptor)) {
-				return method;
-			}
-		}
+        for (Method method : currentMethods) {
+            if (name.equals(method.name) && descriptor.equals(method.descriptor)) {
+                return method;
+            }
+        }
 		return null;
 	}
 

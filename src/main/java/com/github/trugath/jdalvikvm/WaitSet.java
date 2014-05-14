@@ -27,13 +27,13 @@ import java.util.Vector;
 
 final class WaitSet {
 	Object instance;
-	final Vector threads = new Vector();
+	final Vector<Thread> threads = new Vector<>();
 
 	Thread getFirstThreadAndRemove() {
 		if (threads.isEmpty()) {
 			return null;
 		}
-		Thread thread = (Thread)threads.elementAt(0);
+		Thread thread = threads.elementAt(0);
 		threads.removeElementAt(0);
 		if (threads.isEmpty()) {
 			instance = null;

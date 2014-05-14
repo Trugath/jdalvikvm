@@ -33,11 +33,11 @@ public class VirtualMachine {
 
 	private volatile boolean isEnd = true;
 	private volatile boolean stopRequested = false;
-	private Object stopWait = new Object();
+	private final Object stopWait = new Object();
 
-	Vector threads = new Vector();
+	Vector<Thread> threads = new Vector<>();
 
-	private final Vector waitSets = new Vector();
+	private final Vector<WaitSet> waitSets = new Vector<>();
 
 	public VirtualMachine() {
 		systemClassLoader = new ClassLoader(this);
@@ -185,7 +185,7 @@ public class VirtualMachine {
 	}
 
 	private String toDimesionString(final int dimension) {
-		StringBuffer returned = new StringBuffer();
+		StringBuilder returned = new StringBuilder();
 		for (int i = 0; i < dimension; i++) {
 			returned.append("[]");
 		}
@@ -196,115 +196,119 @@ public class VirtualMachine {
 		// INTERFACE METHOD SECTION {
 		String packageName = absoluteClassName.substring(0, absoluteClassName.lastIndexOf('/'));
 		String className = absoluteClassName.substring(absoluteClassName.lastIndexOf('/') + 1);
-		if ("java/util".equals(packageName)) {
-			if ("Enumeration".equals(className)) {
-				if ("nextElement".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Enumeration)toTargetInstance(frame.objectArguments[0])).nextElement();
-					return true;
-				} else if ("hasMoreElements".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Enumeration)toTargetInstance(frame.objectArguments[0])).hasMoreElements() ? 1 : 0;
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} else if ("java/lang".equals(packageName)) {
-			if ("Runnable".equals(className) && "run".equals(methodName)) {
-				((Runnable)toTargetInstance(frame.objectArguments[0])).run();
-				return true;
-			}
-		} else if ("java/io".equals(packageName)) {
-			if ("DataInput".equals(className)) {
-				if ("readInt".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readInt();
-					return true;
-				} else if ("readUTF".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readUTF();
-					return true;
-				} else if ("readByte".equals(methodName) && "()B".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readByte();
-					return true;
-				} else if ("readChar".equals(methodName) && "()C".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readChar();
-					return true;
-				} else if ("readLong".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readLong();
-					return true;
-				} else if ("readFully".equals(methodName) && "([B)V".equals(methodDescriptor)) {
-					((DataInput)toTargetInstance(frame.objectArguments[0])).readFully((byte[])frame.objectArguments[1]);
-					return true;
-				} else if ("readFully".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((DataInput)toTargetInstance(frame.objectArguments[0])).readFully((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skipBytes".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).skipBytes(frame.intArguments[1]);
-					return true;
-				} else if ("readShort".equals(methodName) && "()S".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readShort();
-					return true;
-				} else if ("readFloat".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((DataInput)toTargetInstance(frame.objectArguments[0])).readFloat());
-					return true;
-				} else if ("readDouble".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((DataInput)toTargetInstance(frame.objectArguments[0])).readDouble());
-					return true;
-				} else if ("readBoolean".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readBoolean() ? 1 : 0;
-					return true;
-				} else if ("readUnsignedByte".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readUnsignedByte();
-					return true;
-				} else if ("readUnsignedShort".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInput)toTargetInstance(frame.objectArguments[0])).readUnsignedShort();
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("DataOutput".equals(className)) {
-				if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([B)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("writeInt".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeInt(frame.intArguments[1]);
-					return true;
-				} else if ("writeUTF".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeUTF((String)frame.objectArguments[1]);
-					return true;
-				} else if ("writeByte".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeByte(frame.intArguments[1]);
-					return true;
-				} else if ("writeChar".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeChar(frame.intArguments[1]);
-					return true;
-				} else if ("writeLong".equals(methodName) && "(J)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeLong(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("writeShort".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeShort(frame.intArguments[1]);
-					return true;
-				} else if ("writeFloat".equals(methodName) && "(F)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeFloat(Float.intBitsToFloat(frame.intArguments[1]));
-					return true;
-				} else if ("writeChars".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeChars((String)frame.objectArguments[1]);
-					return true;
-				} else if ("writeDouble".equals(methodName) && "(D)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeDouble(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
-					return true;
-				} else if ("writeBoolean".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
-					((DataOutput)toTargetInstance(frame.objectArguments[0])).writeBoolean(frame.intArguments[1] != 0);
-					return true;
-				} else {
-					return false;
-				}
-			}
-		}
+        switch (packageName) {
+            case "java/util":
+                if ("Enumeration".equals(className)) {
+                    if ("nextElement".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                        frame.objectReturn = ((Enumeration) toTargetInstance(frame.objectArguments[0])).nextElement();
+                        return true;
+                    } else if ("hasMoreElements".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                        frame.singleReturn = ((Enumeration) toTargetInstance(frame.objectArguments[0])).hasMoreElements() ? 1 : 0;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                break;
+            case "java/lang":
+                if ("Runnable".equals(className) && "run".equals(methodName)) {
+                    ((Runnable) toTargetInstance(frame.objectArguments[0])).run();
+                    return true;
+                }
+                break;
+            case "java/io":
+                if ("DataInput".equals(className)) {
+                    if ("readInt".equals(methodName) && "()I".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readInt();
+                        return true;
+                    } else if ("readUTF".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readUTF();
+                        return true;
+                    } else if ("readByte".equals(methodName) && "()B".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readByte();
+                        return true;
+                    } else if ("readChar".equals(methodName) && "()C".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readChar();
+                        return true;
+                    } else if ("readLong".equals(methodName) && "()J".equals(methodDescriptor)) {
+                        frame.doubleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readLong();
+                        return true;
+                    } else if ("readFully".equals(methodName) && "([B)V".equals(methodDescriptor)) {
+                        ((DataInput) toTargetInstance(frame.objectArguments[0])).readFully((byte[]) frame.objectArguments[1]);
+                        return true;
+                    } else if ("readFully".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                        ((DataInput) toTargetInstance(frame.objectArguments[0])).readFully((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                        return true;
+                    } else if ("skipBytes".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).skipBytes(frame.intArguments[1]);
+                        return true;
+                    } else if ("readShort".equals(methodName) && "()S".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readShort();
+                        return true;
+                    } else if ("readFloat".equals(methodName) && "()F".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(((DataInput) toTargetInstance(frame.objectArguments[0])).readFloat());
+                        return true;
+                    } else if ("readDouble".equals(methodName) && "()D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(((DataInput) toTargetInstance(frame.objectArguments[0])).readDouble());
+                        return true;
+                    } else if ("readBoolean".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readBoolean() ? 1 : 0;
+                        return true;
+                    } else if ("readUnsignedByte".equals(methodName) && "()I".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readUnsignedByte();
+                        return true;
+                    } else if ("readUnsignedShort".equals(methodName) && "()I".equals(methodDescriptor)) {
+                        frame.singleReturn = ((DataInput) toTargetInstance(frame.objectArguments[0])).readUnsignedShort();
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("DataOutput".equals(className)) {
+                    if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                        return true;
+                    } else if ("write".equals(methodName) && "([B)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1]);
+                        return true;
+                    } else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                        return true;
+                    } else if ("writeInt".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeInt(frame.intArguments[1]);
+                        return true;
+                    } else if ("writeUTF".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeUTF((String) frame.objectArguments[1]);
+                        return true;
+                    } else if ("writeByte".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeByte(frame.intArguments[1]);
+                        return true;
+                    } else if ("writeChar".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeChar(frame.intArguments[1]);
+                        return true;
+                    } else if ("writeLong".equals(methodName) && "(J)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeLong(getLong(frame.intArguments, 1));
+                        return true;
+                    } else if ("writeShort".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeShort(frame.intArguments[1]);
+                        return true;
+                    } else if ("writeFloat".equals(methodName) && "(F)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeFloat(Float.intBitsToFloat(frame.intArguments[1]));
+                        return true;
+                    } else if ("writeChars".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeChars((String) frame.objectArguments[1]);
+                        return true;
+                    } else if ("writeDouble".equals(methodName) && "(D)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeDouble(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
+                        return true;
+                    } else if ("writeBoolean".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
+                        ((DataOutput) toTargetInstance(frame.objectArguments[0])).writeBoolean(frame.intArguments[1] != 0);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                break;
+        }
 		// }
 		return false;
 	}
@@ -339,47 +343,56 @@ public class VirtualMachine {
 		// }
 		// not CLDC classes but used in dex file
 		if ("java/lang".equals(packageName)) {
-			if ("Boolean".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Boolean.class;
-					return true;
-				}
-			} else if ("Byte".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Byte.class;
-					return true;
-				}
-			} else if ("Short".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Short.class;
-					return true;
-				}
-			} else if ("Integer".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Integer.class;
-					return true;
-				}
-			} else if ("Long".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Long.class;
-					return true;
-				}
-			} else if ("Float".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Float.class;
-					return true;
-				}
-			} else if ("Double".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Double.class;
-					return true;
-				}
-			} else if ("Character".equals(className)) {
-				if ("TYPE".equals(fieldName)) {
-					frame.objectRegisters[destination] = Character.class;
-					return true;
-				}
-			}
+            switch (className) {
+                case "Boolean":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Boolean.class;
+                        return true;
+                    }
+                    break;
+                case "Byte":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Byte.class;
+                        return true;
+                    }
+                    break;
+                case "Short":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Short.class;
+                        return true;
+                    }
+                    break;
+                case "Integer":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Integer.class;
+                        return true;
+                    }
+                    break;
+                case "Long":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Long.class;
+                        return true;
+                    }
+                    break;
+                case "Float":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Float.class;
+                        return true;
+                    }
+                    break;
+                case "Double":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Double.class;
+                        return true;
+                    }
+                    break;
+                case "Character":
+                    if ("TYPE".equals(fieldName)) {
+                        frame.objectRegisters[destination] = Character.class;
+                        return true;
+                    }
+                    break;
+            }
 		}
 		return false;
 	}
@@ -398,301 +411,305 @@ public class VirtualMachine {
 		// CLASS METHOD SECTION {
 		String packageName = absoluteClassName.substring(0, absoluteClassName.lastIndexOf('/'));
 		String className = absoluteClassName.substring(absoluteClassName.lastIndexOf('/') + 1);
-		if ("java/util".equals(packageName)) {
-			if ("Calendar".equals(className)) {
-				if ("getInstance".equals(methodName) && "()Ljava/util/Calendar;".equals(methodDescriptor)) {
-					frame.objectReturn = Calendar.getInstance();
-					return true;
-				} else if ("getInstance".equals(methodName) && "(Ljava/util/TimeZone;)Ljava/util/Calendar;".equals(methodDescriptor)) {
-					frame.objectReturn = Calendar.getInstance((TimeZone)frame.objectArguments[0]);
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("TimeZone".equals(className)) {
-				if ("getDefault".equals(methodName) && "()Ljava/util/TimeZone;".equals(methodDescriptor)) {
-					frame.objectReturn = TimeZone.getDefault();
-					return true;
-				} else if ("getTimeZone".equals(methodName) && "(Ljava/lang/String;)Ljava/util/TimeZone;".equals(methodDescriptor)) {
-					frame.objectReturn = TimeZone.getTimeZone((String)frame.objectArguments[0]);
-					return true;
-				} else if ("getAvailableIDs".equals(methodName) && "()[Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = TimeZone.getAvailableIDs();
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} else if ("java/lang".equals(packageName)) {
-			if ("Byte".equals(className)) {
-				if ("parseByte".equals(methodName) && "(Ljava/lang/String;)B".equals(methodDescriptor)) {
-					frame.singleReturn = Byte.parseByte((String)frame.objectArguments[0]);
-					return true;
-				} else if ("parseByte".equals(methodName) && "(Ljava/lang/String;I)B".equals(methodDescriptor)) {
-					frame.singleReturn = Byte.parseByte((String)frame.objectArguments[0], frame.intArguments[1]);
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Character".equals(className)) {
-				if ("digit".equals(methodName) && "(CI)I".equals(methodDescriptor)) {
-					frame.singleReturn = Character.digit((char)frame.intArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("isDigit".equals(methodName) && "(C)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Character.isDigit((char)frame.intArguments[0]) ? 1 : 0;
-					return true;
-				} else if ("isLowerCase".equals(methodName) && "(C)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Character.isLowerCase((char)frame.intArguments[0]) ? 1 : 0;
-					return true;
-				} else if ("isUpperCase".equals(methodName) && "(C)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Character.isUpperCase((char)frame.intArguments[0]) ? 1 : 0;
-					return true;
-				} else if ("toLowerCase".equals(methodName) && "(C)C".equals(methodDescriptor)) {
-					frame.singleReturn = Character.toLowerCase((char)frame.intArguments[0]);
-					return true;
-				} else if ("toUpperCase".equals(methodName) && "(C)C".equals(methodDescriptor)) {
-					frame.singleReturn = Character.toUpperCase((char)frame.intArguments[0]);
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Class".equals(className) && "forName".equals(methodName)) {
-				frame.objectReturn = Class.forName((String)frame.objectArguments[0]);
-				return true;
-			} else if ("Double".equals(className)) {
-				if ("isNaN".equals(methodName) && "(D)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Double.isNaN(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))) ? 1 : 0;
-					return true;
-				} else if ("valueOf".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/Double;".equals(methodDescriptor)) {
-					frame.objectReturn = Double.valueOf((String)frame.objectArguments[0]);
-					return true;
-				} else if ("toString".equals(methodName) && "(D)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Double.toString(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)));
-					return true;
-				} else if ("isInfinite".equals(methodName) && "(D)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Double.isInfinite(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))) ? 1 : 0;
-					return true;
-				} else if ("parseDouble".equals(methodName) && "(Ljava/lang/String;)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Double.parseDouble((String)frame.objectArguments[0]));
-					return true;
-				} else if ("doubleToLongBits".equals(methodName) && "(D)J".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)));
-					return true;
-				} else if ("longBitsToDouble".equals(methodName) && "(J)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Double.longBitsToDouble(getLong(frame.intArguments, 0)));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Float".equals(className)) {
-				if ("isNaN".equals(methodName) && "(F)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Float.isNaN(Float.intBitsToFloat(frame.intArguments[0])) ? 1 : 0;
-					return true;
-				} else if ("valueOf".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/Float;".equals(methodDescriptor)) {
-					frame.objectReturn = Float.valueOf((String)frame.objectArguments[0]);
-					return true;
-				} else if ("toString".equals(methodName) && "(F)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Float.toString(Float.intBitsToFloat(frame.intArguments[0]));
-					return true;
-				} else if ("parseFloat".equals(methodName) && "(Ljava/lang/String;)F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(Float.parseFloat((String)frame.objectArguments[0]));
-					return true;
-				} else if ("isInfinite".equals(methodName) && "(F)Z".equals(methodDescriptor)) {
-					frame.singleReturn = Float.isInfinite(Float.intBitsToFloat(frame.intArguments[0])) ? 1 : 0;
-					return true;
-				} else if ("floatToIntBits".equals(methodName) && "(F)I".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(Float.intBitsToFloat(frame.intArguments[0]));
-					return true;
-				} else if ("intBitsToFloat".equals(methodName) && "(I)F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(Float.intBitsToFloat(frame.intArguments[0]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Integer".equals(className)) {
-				if ("valueOf".equals(methodName) && "(Ljava/lang/String;I)Ljava/lang/Integer;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.valueOf((String)frame.objectArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("valueOf".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/Integer;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.valueOf((String)frame.objectArguments[0]);
-					return true;
-				} else if ("toString".equals(methodName) && "(II)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.toString(frame.intArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("toString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.toString(frame.intArguments[0]);
-					return true;
-				} else if ("parseInt".equals(methodName) && "(Ljava/lang/String;I)I".equals(methodDescriptor)) {
-					frame.singleReturn = Integer.parseInt((String)frame.objectArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("parseInt".equals(methodName) && "(Ljava/lang/String;)I".equals(methodDescriptor)) {
-					frame.singleReturn = Integer.parseInt((String)frame.objectArguments[0]);
-					return true;
-				} else if ("toHexString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.toHexString(frame.intArguments[0]);
-					return true;
-				} else if ("toOctalString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.toOctalString(frame.intArguments[0]);
-					return true;
-				} else if ("toBinaryString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Integer.toBinaryString(frame.intArguments[0]);
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Long".equals(className)) {
-				if ("toString".equals(methodName) && "(JI)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Long.toString(getLong(frame.intArguments, 0), frame.intArguments[2]);
-					return true;
-				} else if ("toString".equals(methodName) && "(J)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = Long.toString(getLong(frame.intArguments, 0));
-					return true;
-				} else if ("parseLong".equals(methodName) && "(Ljava/lang/String;I)J".equals(methodDescriptor)) {
-					frame.doubleReturn = Long.parseLong((String)frame.objectArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("parseLong".equals(methodName) && "(Ljava/lang/String;)J".equals(methodDescriptor)) {
-					frame.doubleReturn = Long.parseLong((String)frame.objectArguments[0]);
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Math".equals(className)) {
-				if ("sin".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.sin(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("cos".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.cos(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("tan".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.tan(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("abs".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = Math.abs(frame.intArguments[0]);
-					return true;
-				} else if ("abs".equals(methodName) && "(J)J".equals(methodDescriptor)) {
-					frame.doubleReturn = Math.abs(getLong(frame.intArguments, 0));
-					return true;
-				} else if ("abs".equals(methodName) && "(F)F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(Math.abs(Float.intBitsToFloat(frame.intArguments[0])));
-					return true;
-				} else if ("abs".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.abs(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("max".equals(methodName) && "(II)I".equals(methodDescriptor)) {
-					frame.singleReturn = Math.max(frame.intArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("max".equals(methodName) && "(JJ)J".equals(methodDescriptor)) {
-					frame.doubleReturn = Math.max(getLong(frame.intArguments, 0), getLong(frame.intArguments, 2));
-					return true;
-				} else if ("max".equals(methodName) && "(FF)F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(Math.max(Float.intBitsToFloat(frame.intArguments[0]), Float.intBitsToFloat(frame.intArguments[1])));
-					return true;
-				} else if ("max".equals(methodName) && "(DD)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.max(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)), Double.longBitsToDouble(Utils.getLong(frame.intArguments, 2))));
-					return true;
-				} else if ("min".equals(methodName) && "(II)I".equals(methodDescriptor)) {
-					frame.singleReturn = Math.min(frame.intArguments[0], frame.intArguments[1]);
-					return true;
-				} else if ("min".equals(methodName) && "(JJ)J".equals(methodDescriptor)) {
-					frame.doubleReturn = Math.min(getLong(frame.intArguments, 0), getLong(frame.intArguments, 2));
-					return true;
-				} else if ("min".equals(methodName) && "(FF)F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(Math.min(Float.intBitsToFloat(frame.intArguments[0]), Float.intBitsToFloat(frame.intArguments[1])));
-					return true;
-				} else if ("min".equals(methodName) && "(DD)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.min(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)), Double.longBitsToDouble(Utils.getLong(frame.intArguments, 2))));
-					return true;
-				} else if ("sqrt".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.sqrt(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("ceil".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.ceil(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("floor".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.floor(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("toRadians".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.toRadians(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else if ("toDegrees".equals(methodName) && "(D)D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(Math.toDegrees(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Runtime".equals(className) && "getRuntime".equals(methodName)) {
-				frame.objectReturn = Runtime.getRuntime();
-				return true;
-			} else if ("Short".equals(className)) {
-				if ("parseShort".equals(methodName) && "(Ljava/lang/String;)S".equals(methodDescriptor)) {
-					frame.singleReturn = Short.parseShort((String)frame.objectArguments[0]);
-					return true;
-				} else if ("parseShort".equals(methodName) && "(Ljava/lang/String;I)S".equals(methodDescriptor)) {
-					frame.singleReturn = Short.parseShort((String)frame.objectArguments[0], frame.intArguments[1]);
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("String".equals(className)) {
-				if ("valueOf".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf((Object)frame.objectArguments[0]);
-					return true;
-				} else if ("valueOf".equals(methodName) && "([C)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf((char[])frame.objectArguments[0]);
-					return true;
-				} else if ("valueOf".equals(methodName) && "([CII)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf((char[])frame.objectArguments[0], frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("valueOf".equals(methodName) && "(Z)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf(frame.intArguments[0] != 0);
-					return true;
-				} else if ("valueOf".equals(methodName) && "(C)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf((char)frame.intArguments[0]);
-					return true;
-				} else if ("valueOf".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf(frame.intArguments[0]);
-					return true;
-				} else if ("valueOf".equals(methodName) && "(J)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf(getLong(frame.intArguments, 0));
-					return true;
-				} else if ("valueOf".equals(methodName) && "(F)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf(Float.intBitsToFloat(frame.intArguments[0]));
-					return true;
-				} else if ("valueOf".equals(methodName) && "(D)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = String.valueOf(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("System".equals(className)) {
-				if ("gc".equals(methodName) && "()V".equals(methodDescriptor)) {
-					System.gc();
-					return true;
-				} else if ("exit".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					System.exit(frame.intArguments[0]);
-					return true;
-				} else if ("arraycopy".equals(methodName) && "(Ljava/lang/Object;ILjava/lang/Object;II)V".equals(methodDescriptor)) {
-					System.arraycopy((Object)frame.objectArguments[0], frame.intArguments[1], (Object)frame.objectArguments[2], frame.intArguments[3], frame.intArguments[4]);
-					return true;
-				} else if ("getProperty".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = System.getProperty((String)frame.objectArguments[0]);
-					return true;
-				} else if ("identityHashCode".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
-					frame.singleReturn = System.identityHashCode((Object)frame.objectArguments[0]);
-					return true;
-				} else if ("currentTimeMillis".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = System.currentTimeMillis();
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} else if ("java/io".equals(packageName)) {
-			if ("DataInputStream".equals(className) && "readUTF".equals(methodName)) {
-				frame.objectReturn = DataInputStream.readUTF((DataInput)frame.objectArguments[0]);
-				return true;
-			}
-		}
+        switch (packageName) {
+            case "java/util":
+                if ("Calendar".equals(className)) {
+                    if ("getInstance".equals(methodName) && "()Ljava/util/Calendar;".equals(methodDescriptor)) {
+                        frame.objectReturn = Calendar.getInstance();
+                        return true;
+                    } else if ("getInstance".equals(methodName) && "(Ljava/util/TimeZone;)Ljava/util/Calendar;".equals(methodDescriptor)) {
+                        frame.objectReturn = Calendar.getInstance((TimeZone) frame.objectArguments[0]);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("TimeZone".equals(className)) {
+                    if ("getDefault".equals(methodName) && "()Ljava/util/TimeZone;".equals(methodDescriptor)) {
+                        frame.objectReturn = TimeZone.getDefault();
+                        return true;
+                    } else if ("getTimeZone".equals(methodName) && "(Ljava/lang/String;)Ljava/util/TimeZone;".equals(methodDescriptor)) {
+                        frame.objectReturn = TimeZone.getTimeZone((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("getAvailableIDs".equals(methodName) && "()[Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = TimeZone.getAvailableIDs();
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                break;
+            case "java/lang":
+                if ("Byte".equals(className)) {
+                    if ("parseByte".equals(methodName) && "(Ljava/lang/String;)B".equals(methodDescriptor)) {
+                        frame.singleReturn = Byte.parseByte((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("parseByte".equals(methodName) && "(Ljava/lang/String;I)B".equals(methodDescriptor)) {
+                        frame.singleReturn = Byte.parseByte((String) frame.objectArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Character".equals(className)) {
+                    if ("digit".equals(methodName) && "(CI)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Character.digit((char) frame.intArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("isDigit".equals(methodName) && "(C)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Character.isDigit((char) frame.intArguments[0]) ? 1 : 0;
+                        return true;
+                    } else if ("isLowerCase".equals(methodName) && "(C)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Character.isLowerCase((char) frame.intArguments[0]) ? 1 : 0;
+                        return true;
+                    } else if ("isUpperCase".equals(methodName) && "(C)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Character.isUpperCase((char) frame.intArguments[0]) ? 1 : 0;
+                        return true;
+                    } else if ("toLowerCase".equals(methodName) && "(C)C".equals(methodDescriptor)) {
+                        frame.singleReturn = Character.toLowerCase((char) frame.intArguments[0]);
+                        return true;
+                    } else if ("toUpperCase".equals(methodName) && "(C)C".equals(methodDescriptor)) {
+                        frame.singleReturn = Character.toUpperCase((char) frame.intArguments[0]);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Class".equals(className) && "forName".equals(methodName)) {
+                    frame.objectReturn = Class.forName((String) frame.objectArguments[0]);
+                    return true;
+                } else if ("Double".equals(className)) {
+                    if ("isNaN".equals(methodName) && "(D)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Double.isNaN(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))) ? 1 : 0;
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/Double;".equals(methodDescriptor)) {
+                        frame.objectReturn = Double.valueOf((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("toString".equals(methodName) && "(D)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Double.toString(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)));
+                        return true;
+                    } else if ("isInfinite".equals(methodName) && "(D)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Double.isInfinite(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))) ? 1 : 0;
+                        return true;
+                    } else if ("parseDouble".equals(methodName) && "(Ljava/lang/String;)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Double.parseDouble((String) frame.objectArguments[0]));
+                        return true;
+                    } else if ("doubleToLongBits".equals(methodName) && "(D)J".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)));
+                        return true;
+                    } else if ("longBitsToDouble".equals(methodName) && "(J)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Double.longBitsToDouble(getLong(frame.intArguments, 0)));
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Float".equals(className)) {
+                    if ("isNaN".equals(methodName) && "(F)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.isNaN(Float.intBitsToFloat(frame.intArguments[0])) ? 1 : 0;
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/Float;".equals(methodDescriptor)) {
+                        frame.objectReturn = Float.valueOf((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("toString".equals(methodName) && "(F)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Float.toString(Float.intBitsToFloat(frame.intArguments[0]));
+                        return true;
+                    } else if ("parseFloat".equals(methodName) && "(Ljava/lang/String;)F".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(Float.parseFloat((String) frame.objectArguments[0]));
+                        return true;
+                    } else if ("isInfinite".equals(methodName) && "(F)Z".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.isInfinite(Float.intBitsToFloat(frame.intArguments[0])) ? 1 : 0;
+                        return true;
+                    } else if ("floatToIntBits".equals(methodName) && "(F)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(Float.intBitsToFloat(frame.intArguments[0]));
+                        return true;
+                    } else if ("intBitsToFloat".equals(methodName) && "(I)F".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(Float.intBitsToFloat(frame.intArguments[0]));
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Integer".equals(className)) {
+                    if ("valueOf".equals(methodName) && "(Ljava/lang/String;I)Ljava/lang/Integer;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.valueOf((String) frame.objectArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/Integer;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.valueOf((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("toString".equals(methodName) && "(II)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.toString(frame.intArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("toString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.toString(frame.intArguments[0]);
+                        return true;
+                    } else if ("parseInt".equals(methodName) && "(Ljava/lang/String;I)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Integer.parseInt((String) frame.objectArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("parseInt".equals(methodName) && "(Ljava/lang/String;)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Integer.parseInt((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("toHexString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.toHexString(frame.intArguments[0]);
+                        return true;
+                    } else if ("toOctalString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.toOctalString(frame.intArguments[0]);
+                        return true;
+                    } else if ("toBinaryString".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Integer.toBinaryString(frame.intArguments[0]);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Long".equals(className)) {
+                    if ("toString".equals(methodName) && "(JI)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Long.toString(getLong(frame.intArguments, 0), frame.intArguments[2]);
+                        return true;
+                    } else if ("toString".equals(methodName) && "(J)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = Long.toString(getLong(frame.intArguments, 0));
+                        return true;
+                    } else if ("parseLong".equals(methodName) && "(Ljava/lang/String;I)J".equals(methodDescriptor)) {
+                        frame.doubleReturn = Long.parseLong((String) frame.objectArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("parseLong".equals(methodName) && "(Ljava/lang/String;)J".equals(methodDescriptor)) {
+                        frame.doubleReturn = Long.parseLong((String) frame.objectArguments[0]);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Math".equals(className)) {
+                    if ("sin".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.sin(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("cos".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.cos(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("tan".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.tan(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("abs".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Math.abs(frame.intArguments[0]);
+                        return true;
+                    } else if ("abs".equals(methodName) && "(J)J".equals(methodDescriptor)) {
+                        frame.doubleReturn = Math.abs(getLong(frame.intArguments, 0));
+                        return true;
+                    } else if ("abs".equals(methodName) && "(F)F".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(Math.abs(Float.intBitsToFloat(frame.intArguments[0])));
+                        return true;
+                    } else if ("abs".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.abs(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("max".equals(methodName) && "(II)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Math.max(frame.intArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("max".equals(methodName) && "(JJ)J".equals(methodDescriptor)) {
+                        frame.doubleReturn = Math.max(getLong(frame.intArguments, 0), getLong(frame.intArguments, 2));
+                        return true;
+                    } else if ("max".equals(methodName) && "(FF)F".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(Math.max(Float.intBitsToFloat(frame.intArguments[0]), Float.intBitsToFloat(frame.intArguments[1])));
+                        return true;
+                    } else if ("max".equals(methodName) && "(DD)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.max(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)), Double.longBitsToDouble(Utils.getLong(frame.intArguments, 2))));
+                        return true;
+                    } else if ("min".equals(methodName) && "(II)I".equals(methodDescriptor)) {
+                        frame.singleReturn = Math.min(frame.intArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else if ("min".equals(methodName) && "(JJ)J".equals(methodDescriptor)) {
+                        frame.doubleReturn = Math.min(getLong(frame.intArguments, 0), getLong(frame.intArguments, 2));
+                        return true;
+                    } else if ("min".equals(methodName) && "(FF)F".equals(methodDescriptor)) {
+                        frame.singleReturn = Float.floatToIntBits(Math.min(Float.intBitsToFloat(frame.intArguments[0]), Float.intBitsToFloat(frame.intArguments[1])));
+                        return true;
+                    } else if ("min".equals(methodName) && "(DD)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.min(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)), Double.longBitsToDouble(Utils.getLong(frame.intArguments, 2))));
+                        return true;
+                    } else if ("sqrt".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.sqrt(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("ceil".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.ceil(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("floor".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.floor(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("toRadians".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.toRadians(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else if ("toDegrees".equals(methodName) && "(D)D".equals(methodDescriptor)) {
+                        frame.doubleReturn = Double.doubleToLongBits(Math.toDegrees(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0))));
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("Runtime".equals(className) && "getRuntime".equals(methodName)) {
+                    frame.objectReturn = Runtime.getRuntime();
+                    return true;
+                } else if ("Short".equals(className)) {
+                    if ("parseShort".equals(methodName) && "(Ljava/lang/String;)S".equals(methodDescriptor)) {
+                        frame.singleReturn = Short.parseShort((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("parseShort".equals(methodName) && "(Ljava/lang/String;I)S".equals(methodDescriptor)) {
+                        frame.singleReturn = Short.parseShort((String) frame.objectArguments[0], frame.intArguments[1]);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("String".equals(className)) {
+                    if ("valueOf".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf((Object) frame.objectArguments[0]);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "([C)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf((char[]) frame.objectArguments[0]);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "([CII)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf((char[]) frame.objectArguments[0], frame.intArguments[1], frame.intArguments[2]);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(Z)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf(frame.intArguments[0] != 0);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(C)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf((char) frame.intArguments[0]);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf(frame.intArguments[0]);
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(J)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf(getLong(frame.intArguments, 0));
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(F)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf(Float.intBitsToFloat(frame.intArguments[0]));
+                        return true;
+                    } else if ("valueOf".equals(methodName) && "(D)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = String.valueOf(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 0)));
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if ("System".equals(className)) {
+                    if ("gc".equals(methodName) && "()V".equals(methodDescriptor)) {
+                        System.gc();
+                        return true;
+                    } else if ("exit".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                        System.exit(frame.intArguments[0]);
+                        return true;
+                    } else if ("arraycopy".equals(methodName) && "(Ljava/lang/Object;ILjava/lang/Object;II)V".equals(methodDescriptor)) {
+                        System.arraycopy((Object) frame.objectArguments[0], frame.intArguments[1], (Object) frame.objectArguments[2], frame.intArguments[3], frame.intArguments[4]);
+                        return true;
+                    } else if ("getProperty".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/String;".equals(methodDescriptor)) {
+                        frame.objectReturn = System.getProperty((String) frame.objectArguments[0]);
+                        return true;
+                    } else if ("identityHashCode".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
+                        frame.singleReturn = System.identityHashCode((Object) frame.objectArguments[0]);
+                        return true;
+                    } else if ("currentTimeMillis".equals(methodName) && "()J".equals(methodDescriptor)) {
+                        frame.doubleReturn = System.currentTimeMillis();
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                break;
+            case "java/io":
+                if ("DataInputStream".equals(className) && "readUTF".equals(methodName)) {
+                    frame.objectReturn = DataInputStream.readUTF((DataInput) frame.objectArguments[0]);
+                    return true;
+                }
+                break;
+        }
 		// }
 		// replace existing classes to add special code
 		if ("java/lang".equals(packageName)) {
@@ -903,7 +920,7 @@ public class VirtualMachine {
 						return new Vector[dimensions[0]][dimensions[1]][];
 				}
 			}
-		} catch (ClassNotFoundException e) {
+		} catch (ClassNotFoundException ignored) {
 		}
 		// TODO Add types
 		throw new IllegalArgumentException("not supported array type: " + componentType.getName());
@@ -913,1142 +930,1150 @@ public class VirtualMachine {
 		// INSTANCE METHOD SECTION {
 		String packageName = absoluteClassName.substring(0, absoluteClassName.lastIndexOf('/'));
 		String className = absoluteClassName.substring(absoluteClassName.lastIndexOf('/') + 1);
-		if ("java/util".equals(packageName)) {
-			if ("Calendar".equals(className)) {
-				if ("get".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Calendar)toTargetInstance(frame.objectArguments[0])).get(frame.intArguments[1]);
-					return true;
-				} else if ("set".equals(methodName) && "(II)V".equals(methodDescriptor)) {
-					((Calendar)toTargetInstance(frame.objectArguments[0])).set(frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("after".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Calendar)toTargetInstance(frame.objectArguments[0])).after((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Calendar)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("before".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Calendar)toTargetInstance(frame.objectArguments[0])).before((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("getTime".equals(methodName) && "()Ljava/util/Date;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Calendar)toTargetInstance(frame.objectArguments[0])).getTime();
-					return true;
-				} else if ("setTime".equals(methodName) && "(Ljava/util/Date;)V".equals(methodDescriptor)) {
-					((Calendar)toTargetInstance(frame.objectArguments[0])).setTime((Date)frame.objectArguments[1]);
-					return true;
-				} else if ("setTimeZone".equals(methodName) && "(Ljava/util/TimeZone;)V".equals(methodDescriptor)) {
-					((Calendar)toTargetInstance(frame.objectArguments[0])).setTimeZone((TimeZone)frame.objectArguments[1]);
-					return true;
-				} else if ("getTimeZone".equals(methodName) && "()Ljava/util/TimeZone;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Calendar)toTargetInstance(frame.objectArguments[0])).getTimeZone();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Date".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Date)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("getTime".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Date)toTargetInstance(frame.objectArguments[0])).getTime();
-					return true;
-				} else if ("setTime".equals(methodName) && "(J)V".equals(methodDescriptor)) {
-					((Date)toTargetInstance(frame.objectArguments[0])).setTime(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Date)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Date)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("EmptyStackException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("Hashtable".equals(className)) {
-				if ("get".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).get((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("put".equals(methodName) && "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).put((Object)frame.objectArguments[1], (Object)frame.objectArguments[2]);
-					return true;
-				} else if ("size".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).size();
-					return true;
-				} else if ("keys".equals(methodName) && "()Ljava/util/Enumeration;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).keys();
-					return true;
-				} else if ("clear".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Hashtable)toTargetInstance(frame.objectArguments[0])).clear();
-					return true;
-				} else if ("remove".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).remove((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("isEmpty".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).isEmpty() ? 1 : 0;
-					return true;
-				} else if ("elements".equals(methodName) && "()Ljava/util/Enumeration;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).elements();
-					return true;
-				} else if ("contains".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).contains((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("containsKey".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Hashtable)toTargetInstance(frame.objectArguments[0])).containsKey((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("NoSuchElementException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("Random".equals(className)) {
-				if ("setSeed".equals(methodName) && "(J)V".equals(methodDescriptor)) {
-					((Random)toTargetInstance(frame.objectArguments[0])).setSeed(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("nextInt".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Random)toTargetInstance(frame.objectArguments[0])).nextInt();
-					return true;
-				} else if ("nextInt".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Random)toTargetInstance(frame.objectArguments[0])).nextInt(frame.intArguments[1]);
-					return true;
-				} else if ("nextLong".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Random)toTargetInstance(frame.objectArguments[0])).nextLong();
-					return true;
-				} else if ("nextFloat".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((Random)toTargetInstance(frame.objectArguments[0])).nextFloat());
-					return true;
-				} else if ("nextDouble".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((Random)toTargetInstance(frame.objectArguments[0])).nextDouble());
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Stack".equals(className)) {
-				if ("pop".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Stack)toTargetInstance(frame.objectArguments[0])).pop();
-					return true;
-				} else if ("push".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Stack)toTargetInstance(frame.objectArguments[0])).push((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("peek".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Stack)toTargetInstance(frame.objectArguments[0])).peek();
-					return true;
-				} else if ("empty".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Stack)toTargetInstance(frame.objectArguments[0])).empty() ? 1 : 0;
-					return true;
-				} else if ("search".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Stack)toTargetInstance(frame.objectArguments[0])).search((Object)frame.objectArguments[1]);
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/util/Vector", methodName, methodDescriptor);
-				}
-			} else if ("TimeZone".equals(className)) {
-				if ("getID".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((TimeZone)toTargetInstance(frame.objectArguments[0])).getID();
-					return true;
-				} else if ("getOffset".equals(methodName) && "(IIIIII)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((TimeZone)toTargetInstance(frame.objectArguments[0])).getOffset(frame.intArguments[1], frame.intArguments[2], frame.intArguments[3], frame.intArguments[4], frame.intArguments[5], frame.intArguments[6]);
-					return true;
-				} else if ("getRawOffset".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((TimeZone)toTargetInstance(frame.objectArguments[0])).getRawOffset();
-					return true;
-				} else if ("useDaylightTime".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((TimeZone)toTargetInstance(frame.objectArguments[0])).useDaylightTime() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Vector".equals(className)) {
-				if ("size".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).size();
-					return true;
-				} else if ("setSize".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).setSize(frame.intArguments[1]);
-					return true;
-				} else if ("isEmpty".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).isEmpty() ? 1 : 0;
-					return true;
-				} else if ("indexOf".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).indexOf((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("indexOf".equals(methodName) && "(Ljava/lang/Object;I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).indexOf((Object)frame.objectArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("copyInto".equals(methodName) && "([Ljava/lang/Object;)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).copyInto((Object[])frame.objectArguments[1]);
-					return true;
-				} else if ("capacity".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).capacity();
-					return true;
-				} else if ("elements".equals(methodName) && "()Ljava/util/Enumeration;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).elements();
-					return true;
-				} else if ("contains".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).contains((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("elementAt".equals(methodName) && "(I)Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).elementAt(frame.intArguments[1]);
-					return true;
-				} else if ("trimToSize".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).trimToSize();
-					return true;
-				} else if ("addElement".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).addElement((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("lastIndexOf".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).lastIndexOf((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("lastIndexOf".equals(methodName) && "(Ljava/lang/Object;I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).lastIndexOf((Object)frame.objectArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("lastElement".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).lastElement();
-					return true;
-				} else if ("firstElement".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).firstElement();
-					return true;
-				} else if ("setElementAt".equals(methodName) && "(Ljava/lang/Object;I)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).setElementAt((Object)frame.objectArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("removeElement".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Vector)toTargetInstance(frame.objectArguments[0])).removeElement((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("ensureCapacity".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).ensureCapacity(frame.intArguments[1]);
-					return true;
-				} else if ("removeElementAt".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).removeElementAt(frame.intArguments[1]);
-					return true;
-				} else if ("insertElementAt".equals(methodName) && "(Ljava/lang/Object;I)V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).insertElementAt((Object)frame.objectArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("removeAllElements".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Vector)toTargetInstance(frame.objectArguments[0])).removeAllElements();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			}
-		} else if ("java/lang/ref".equals(packageName)) {
-			if ("Reference".equals(className)) {
-				if ("get".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Reference)toTargetInstance(frame.objectArguments[0])).get();
-					return true;
-				} else if ("clear".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Reference)toTargetInstance(frame.objectArguments[0])).clear();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("WeakReference".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/ref/Reference", methodName, methodDescriptor);
-			}
-		} else if ("java/lang".equals(packageName)) {
-			if ("ArithmeticException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("ArrayIndexOutOfBoundsException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/IndexOutOfBoundsException", methodName, methodDescriptor);
-			} else if ("ArrayStoreException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("Boolean".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Boolean)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Boolean)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Boolean)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("booleanValue".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Boolean)toTargetInstance(frame.objectArguments[0])).booleanValue() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Byte".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Byte)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Byte)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Byte)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
-					frame.singleReturn = ((Byte)toTargetInstance(frame.objectArguments[0])).byteValue();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Character".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Character)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Character)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Character)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("charValue".equals(methodName) && "()C".equals(methodDescriptor)) {
-					frame.singleReturn = ((Character)toTargetInstance(frame.objectArguments[0])).charValue();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Class".equals(className)) {
-				if ("isArray".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Class)toTargetInstance(frame.objectArguments[0])).isArray() ? 1 : 0;
-					return true;
-				} else if ("getName".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Class)toTargetInstance(frame.objectArguments[0])).getName();
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Class)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("isInstance".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Class)toTargetInstance(frame.objectArguments[0])).isInstance((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("newInstance".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Class)toTargetInstance(frame.objectArguments[0])).newInstance();
-					return true;
-				} else if ("isInterface".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Class)toTargetInstance(frame.objectArguments[0])).isInterface() ? 1 : 0;
-					return true;
-				} else if ("isAssignableFrom".equals(methodName) && "(Ljava/lang/Class;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Class)toTargetInstance(frame.objectArguments[0])).isAssignableFrom((Class)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("getResourceAsStream".equals(methodName) && "(Ljava/lang/String;)Ljava/io/InputStream;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Class)toTargetInstance(frame.objectArguments[0])).getResourceAsStream((String)frame.objectArguments[1]);
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("ClassCastException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("ClassNotFoundException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
-			} else if ("Double".equals(className)) {
-				if ("isNaN".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).isNaN() ? 1 : 0;
-					return true;
-				} else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Double)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("intValue".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).intValue();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).byteValue();
-					return true;
-				} else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).longValue();
-					return true;
-				} else if ("isInfinite".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).isInfinite() ? 1 : 0;
-					return true;
-				} else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
-					frame.singleReturn = ((Double)toTargetInstance(frame.objectArguments[0])).shortValue();
-					return true;
-				} else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((Double)toTargetInstance(frame.objectArguments[0])).floatValue());
-					return true;
-				} else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((Double)toTargetInstance(frame.objectArguments[0])).doubleValue());
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Error".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Throwable", methodName, methodDescriptor);
-			} else if ("Exception".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Throwable", methodName, methodDescriptor);
-			} else if ("Float".equals(className)) {
-				if ("isNaN".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).isNaN() ? 1 : 0;
-					return true;
-				} else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Float)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("intValue".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).intValue();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).byteValue();
-					return true;
-				} else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).longValue();
-					return true;
-				} else if ("isInfinite".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).isInfinite() ? 1 : 0;
-					return true;
-				} else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
-					frame.singleReturn = ((Float)toTargetInstance(frame.objectArguments[0])).shortValue();
-					return true;
-				} else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((Float)toTargetInstance(frame.objectArguments[0])).floatValue());
-					return true;
-				} else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((Float)toTargetInstance(frame.objectArguments[0])).doubleValue());
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("IllegalAccessException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
-			} else if ("IllegalArgumentException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("IllegalMonitorStateException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("IllegalThreadStateException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/IllegalArgumentException", methodName, methodDescriptor);
-			} else if ("IndexOutOfBoundsException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("InstantiationException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
-			} else if ("Integer".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("intValue".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).intValue();
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
-					frame.singleReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).byteValue();
-					return true;
-				} else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).longValue();
-					return true;
-				} else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
-					frame.singleReturn = ((Integer)toTargetInstance(frame.objectArguments[0])).shortValue();
-					return true;
-				} else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((Integer)toTargetInstance(frame.objectArguments[0])).floatValue());
-					return true;
-				} else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((Integer)toTargetInstance(frame.objectArguments[0])).doubleValue());
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("InterruptedException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
-			} else if ("Long".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Long)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Long)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Long)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Long)toTargetInstance(frame.objectArguments[0])).longValue();
-					return true;
-				} else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((Long)toTargetInstance(frame.objectArguments[0])).floatValue());
-					return true;
-				} else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((Long)toTargetInstance(frame.objectArguments[0])).doubleValue());
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("Math".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-			} else if ("NegativeArraySizeException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("NoClassDefFoundError".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Error", methodName, methodDescriptor);
-			} else if ("NullPointerException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("NumberFormatException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/IllegalArgumentException", methodName, methodDescriptor);
-			} else if ("OutOfMemoryError".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/VirtualMachineError", methodName, methodDescriptor);
-			} else if ("Runtime".equals(className)) {
-				if ("gc".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Runtime)toTargetInstance(frame.objectArguments[0])).gc();
-					return true;
-				} else if ("exit".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((Runtime)toTargetInstance(frame.objectArguments[0])).exit(frame.intArguments[1]);
-					return true;
-				} else if ("freeMemory".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Runtime)toTargetInstance(frame.objectArguments[0])).freeMemory();
-					return true;
-				} else if ("totalMemory".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Runtime)toTargetInstance(frame.objectArguments[0])).totalMemory();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("RuntimeException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
-			} else if ("SecurityException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
-			} else if ("Short".equals(className)) {
-				if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Short)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Short)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Short)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
-					frame.singleReturn = ((Short)toTargetInstance(frame.objectArguments[0])).shortValue();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("String".equals(className)) {
-				if ("trim".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).trim();
-					return true;
-				} else if ("length".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).length();
-					return true;
-				} else if ("charAt".equals(methodName) && "(I)C".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).charAt(frame.intArguments[1]);
-					return true;
-				} else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).equals((Object)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("concat".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).concat((String)frame.objectArguments[1]);
-					return true;
-				} else if ("intern".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).intern();
-					return true;
-				} else if ("indexOf".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).indexOf(frame.intArguments[1]);
-					return true;
-				} else if ("indexOf".equals(methodName) && "(II)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).indexOf(frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("indexOf".equals(methodName) && "(Ljava/lang/String;)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).indexOf((String)frame.objectArguments[1]);
-					return true;
-				} else if ("indexOf".equals(methodName) && "(Ljava/lang/String;I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).indexOf((String)frame.objectArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("replace".equals(methodName) && "(CC)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).replace((char)frame.intArguments[1], (char)frame.intArguments[2]);
-					return true;
-				} else if ("getChars".equals(methodName) && "(II[CI)V".equals(methodDescriptor)) {
-					((String)toTargetInstance(frame.objectArguments[0])).getChars(frame.intArguments[1], frame.intArguments[2], (char[])frame.objectArguments[3], frame.intArguments[4]);
-					return true;
-				} else if ("getBytes".equals(methodName) && "(Ljava/lang/String;)[B".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).getBytes((String)frame.objectArguments[1]);
-					return true;
-				} else if ("getBytes".equals(methodName) && "()[B".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).getBytes();
-					return true;
-				} else if ("endsWith".equals(methodName) && "(Ljava/lang/String;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).endsWith((String)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).hashCode();
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0]));
-					return true;
-				} else if ("compareTo".equals(methodName) && "(Ljava/lang/String;)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).compareTo((String)frame.objectArguments[1]);
-					return true;
-				} else if ("substring".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).substring(frame.intArguments[1]);
-					return true;
-				} else if ("substring".equals(methodName) && "(II)Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).substring(frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("startsWith".equals(methodName) && "(Ljava/lang/String;I)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).startsWith((String)frame.objectArguments[1], frame.intArguments[2]) ? 1 : 0;
-					return true;
-				} else if ("startsWith".equals(methodName) && "(Ljava/lang/String;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).startsWith((String)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else if ("lastIndexOf".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).lastIndexOf(frame.intArguments[1]);
-					return true;
-				} else if ("lastIndexOf".equals(methodName) && "(II)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).lastIndexOf(frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("toLowerCase".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).toLowerCase();
-					return true;
-				} else if ("toUpperCase".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).toUpperCase();
-					return true;
-				} else if ("toCharArray".equals(methodName) && "()[C".equals(methodDescriptor)) {
-					frame.objectReturn = ((String)toTargetInstance(frame.objectArguments[0])).toCharArray();
-					return true;
-				} else if ("regionMatches".equals(methodName) && "(ZILjava/lang/String;II)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).regionMatches(frame.intArguments[1] != 0, frame.intArguments[2], (String)frame.objectArguments[3], frame.intArguments[4], frame.intArguments[5]) ? 1 : 0;
-					return true;
-				} else if ("equalsIgnoreCase".equals(methodName) && "(Ljava/lang/String;)Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((String)toTargetInstance(frame.objectArguments[0])).equalsIgnoreCase((String)frame.objectArguments[1]) ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("StringBuffer".equals(className)) {
-				if ("length".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).length();
-					return true;
-				} else if ("charAt".equals(methodName) && "(I)C".equals(methodDescriptor)) {
-					frame.singleReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).charAt(frame.intArguments[1]);
-					return true;
-				} else if ("append".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("append".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append((String)frame.objectArguments[1]);
-					return true;
-				} else if ("append".equals(methodName) && "([C)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append((char[])frame.objectArguments[1]);
-					return true;
-				} else if ("append".equals(methodName) && "([CII)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append((char[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("append".equals(methodName) && "(Z)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append(frame.intArguments[1] != 0);
-					return true;
-				} else if ("append".equals(methodName) && "(C)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append((char)frame.intArguments[1]);
-					return true;
-				} else if ("append".equals(methodName) && "(I)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append(frame.intArguments[1]);
-					return true;
-				} else if ("append".equals(methodName) && "(J)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("append".equals(methodName) && "(F)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append(Float.intBitsToFloat(frame.intArguments[1]));
-					return true;
-				} else if ("append".equals(methodName) && "(D)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).append(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
-					return true;
-				} else if ("delete".equals(methodName) && "(II)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).delete(frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("insert".equals(methodName) && "(ILjava/lang/Object;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (Object)frame.objectArguments[2]);
-					return true;
-				} else if ("insert".equals(methodName) && "(ILjava/lang/String;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (String)frame.objectArguments[2]);
-					return true;
-				} else if ("insert".equals(methodName) && "(I[C)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (char[])frame.objectArguments[2]);
-					return true;
-				} else if ("insert".equals(methodName) && "(IZ)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], frame.intArguments[2] != 0);
-					return true;
-				} else if ("insert".equals(methodName) && "(IC)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (char)frame.intArguments[2]);
-					return true;
-				} else if ("insert".equals(methodName) && "(II)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], frame.intArguments[2]);
-					return true;
-				} else if ("insert".equals(methodName) && "(IJ)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], getLong(frame.intArguments, 2));
-					return true;
-				} else if ("insert".equals(methodName) && "(IF)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], Float.intBitsToFloat(frame.intArguments[2]));
-					return true;
-				} else if ("insert".equals(methodName) && "(ID)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], Double.longBitsToDouble(Utils.getLong(frame.intArguments, 2)));
-					return true;
-				} else if ("reverse".equals(methodName) && "()Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).reverse();
-					return true;
-				} else if ("capacity".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).capacity();
-					return true;
-				} else if ("getChars".equals(methodName) && "(II[CI)V".equals(methodDescriptor)) {
-					((StringBuffer)toTargetInstance(frame.objectArguments[0])).getChars(frame.intArguments[1], frame.intArguments[2], (char[])frame.objectArguments[3], frame.intArguments[4]);
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("setLength".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((StringBuffer)toTargetInstance(frame.objectArguments[0])).setLength(frame.intArguments[1]);
-					return true;
-				} else if ("setCharAt".equals(methodName) && "(IC)V".equals(methodDescriptor)) {
-					((StringBuffer)toTargetInstance(frame.objectArguments[0])).setCharAt(frame.intArguments[1], (char)frame.intArguments[2]);
-					return true;
-				} else if ("deleteCharAt".equals(methodName) && "(I)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
-					frame.objectReturn = ((StringBuffer)toTargetInstance(frame.objectArguments[0])).deleteCharAt(frame.intArguments[1]);
-					return true;
-				} else if ("ensureCapacity".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((StringBuffer)toTargetInstance(frame.objectArguments[0])).ensureCapacity(frame.intArguments[1]);
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("StringIndexOutOfBoundsException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/IndexOutOfBoundsException", methodName, methodDescriptor);
-			} else if ("System".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-			} else if ("Throwable".equals(className)) {
-				if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Throwable)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("getMessage".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((Throwable)toTargetInstance(frame.objectArguments[0])).getMessage();
-					return true;
-				} else if ("printStackTrace".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Throwable)toTargetInstance(frame.objectArguments[0])).printStackTrace();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("VirtualMachineError".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Error", methodName, methodDescriptor);
-			}
-		} else if ("java/io".equals(packageName)) {
-			if ("ByteArrayInputStream".equals(className)) {
-				if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).read();
-					return true;
-				} else if ("read".equals(methodName) && "([BII)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).read((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
-					return true;
-				} else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).reset();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("available".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).available();
-					return true;
-				} else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((ByteArrayInputStream)toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/InputStream", methodName, methodDescriptor);
-				}
-			} else if ("ByteArrayOutputStream".equals(className)) {
-				if ("size".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).size();
-					return true;
-				} else if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).reset();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).toString();
-					return true;
-				} else if ("toByteArray".equals(methodName) && "()[B".equals(methodDescriptor)) {
-					frame.objectReturn = ((ByteArrayOutputStream)toTargetInstance(frame.objectArguments[0])).toByteArray();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/OutputStream", methodName, methodDescriptor);
-				}
-			} else if ("DataInputStream".equals(className)) {
-				if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).read();
-					return true;
-				} else if ("read".equals(methodName) && "([B)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).read((byte[])frame.objectArguments[1]);
-					return true;
-				} else if ("read".equals(methodName) && "([BII)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).read((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataInputStream)toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((DataInputStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((DataInputStream)toTargetInstance(frame.objectArguments[0])).reset();
-					return true;
-				} else if ("readInt".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readInt();
-					return true;
-				} else if ("readUTF".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
-					frame.objectReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readUTF();
-					return true;
-				} else if ("readByte".equals(methodName) && "()B".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readByte();
-					return true;
-				} else if ("readChar".equals(methodName) && "()C".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readChar();
-					return true;
-				} else if ("readLong".equals(methodName) && "()J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readLong();
-					return true;
-				} else if ("readFully".equals(methodName) && "([B)V".equals(methodDescriptor)) {
-					((DataInputStream)toTargetInstance(frame.objectArguments[0])).readFully((byte[])frame.objectArguments[1]);
-					return true;
-				} else if ("readFully".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((DataInputStream)toTargetInstance(frame.objectArguments[0])).readFully((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skipBytes".equals(methodName) && "(I)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).skipBytes(frame.intArguments[1]);
-					return true;
-				} else if ("readShort".equals(methodName) && "()S".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readShort();
-					return true;
-				} else if ("readFloat".equals(methodName) && "()F".equals(methodDescriptor)) {
-					frame.singleReturn = Float.floatToIntBits(((DataInputStream)toTargetInstance(frame.objectArguments[0])).readFloat());
-					return true;
-				} else if ("available".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).available();
-					return true;
-				} else if ("readDouble".equals(methodName) && "()D".equals(methodDescriptor)) {
-					frame.doubleReturn = Double.doubleToLongBits(((DataInputStream)toTargetInstance(frame.objectArguments[0])).readDouble());
-					return true;
-				} else if ("readBoolean".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readBoolean() ? 1 : 0;
-					return true;
-				} else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
-					return true;
-				} else if ("readUnsignedByte".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readUnsignedByte();
-					return true;
-				} else if ("readUnsignedShort".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((DataInputStream)toTargetInstance(frame.objectArguments[0])).readUnsignedShort();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/InputStream", methodName, methodDescriptor);
-				}
-			} else if ("DataOutputStream".equals(className)) {
-				if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).flush();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("writeInt".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeInt(frame.intArguments[1]);
-					return true;
-				} else if ("writeUTF".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeUTF((String)frame.objectArguments[1]);
-					return true;
-				} else if ("writeByte".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeByte(frame.intArguments[1]);
-					return true;
-				} else if ("writeChar".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeChar(frame.intArguments[1]);
-					return true;
-				} else if ("writeLong".equals(methodName) && "(J)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeLong(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("writeShort".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeShort(frame.intArguments[1]);
-					return true;
-				} else if ("writeFloat".equals(methodName) && "(F)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeFloat(Float.intBitsToFloat(frame.intArguments[1]));
-					return true;
-				} else if ("writeChars".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeChars((String)frame.objectArguments[1]);
-					return true;
-				} else if ("writeDouble".equals(methodName) && "(D)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeDouble(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
-					return true;
-				} else if ("writeBoolean".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
-					((DataOutputStream)toTargetInstance(frame.objectArguments[0])).writeBoolean(frame.intArguments[1] != 0);
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/OutputStream", methodName, methodDescriptor);
-				}
-			} else if ("EOFException".equals(className)) {
-				return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
-			} else if ("InputStream".equals(className)) {
-				if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStream)toTargetInstance(frame.objectArguments[0])).read();
-					return true;
-				} else if ("read".equals(methodName) && "([B)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStream)toTargetInstance(frame.objectArguments[0])).read((byte[])frame.objectArguments[1]);
-					return true;
-				} else if ("read".equals(methodName) && "([BII)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStream)toTargetInstance(frame.objectArguments[0])).read((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((InputStream)toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((InputStream)toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((InputStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((InputStream)toTargetInstance(frame.objectArguments[0])).reset();
-					return true;
-				} else if ("available".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStream)toTargetInstance(frame.objectArguments[0])).available();
-					return true;
-				} else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStream)toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("InputStreamReader".equals(className)) {
-				if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStreamReader)toTargetInstance(frame.objectArguments[0])).read();
-					return true;
-				} else if ("read".equals(methodName) && "([CII)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStreamReader)toTargetInstance(frame.objectArguments[0])).read((char[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((InputStreamReader)toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((InputStreamReader)toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
-					return true;
-				} else if ("ready".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStreamReader)toTargetInstance(frame.objectArguments[0])).ready() ? 1 : 0;
-					return true;
-				} else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((InputStreamReader)toTargetInstance(frame.objectArguments[0])).reset();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((InputStreamReader)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((InputStreamReader)toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/Reader", methodName, methodDescriptor);
-				}
-			} else if ("InterruptedIOException".equals(className)) {
-				return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
-			} else if ("IOException".equals(className)) {
-				return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
-			} else if ("OutputStream".equals(className)) {
-				if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((OutputStream)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([B)V".equals(methodDescriptor)) {
-					((OutputStream)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((OutputStream)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((OutputStream)toTargetInstance(frame.objectArguments[0])).flush();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((OutputStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("OutputStreamWriter".equals(className)) {
-				if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((OutputStreamWriter)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([CII)V".equals(methodDescriptor)) {
-					((OutputStreamWriter)toTargetInstance(frame.objectArguments[0])).write((char[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("write".equals(methodName) && "(Ljava/lang/String;II)V".equals(methodDescriptor)) {
-					((OutputStreamWriter)toTargetInstance(frame.objectArguments[0])).write((String)frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((OutputStreamWriter)toTargetInstance(frame.objectArguments[0])).flush();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((OutputStreamWriter)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/Writer", methodName, methodDescriptor);
-				}
-			} else if ("PrintStream".equals(className)) {
-				if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).flush();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).write((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("print".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print(frame.intArguments[1] != 0);
-					return true;
-				} else if ("print".equals(methodName) && "(C)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print((char)frame.intArguments[1]);
-					return true;
-				} else if ("print".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print(frame.intArguments[1]);
-					return true;
-				} else if ("print".equals(methodName) && "(J)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("print".equals(methodName) && "(F)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print(Float.intBitsToFloat(frame.intArguments[1]));
-					return true;
-				} else if ("print".equals(methodName) && "(D)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
-					return true;
-				} else if ("print".equals(methodName) && "([C)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print((char[])frame.objectArguments[1]);
-					return true;
-				} else if ("print".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print((String)frame.objectArguments[1]);
-					return true;
-				} else if ("print".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).print((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("println".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println();
-					return true;
-				} else if ("println".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println(frame.intArguments[1] != 0);
-					return true;
-				} else if ("println".equals(methodName) && "(C)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println((char)frame.intArguments[1]);
-					return true;
-				} else if ("println".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println(frame.intArguments[1]);
-					return true;
-				} else if ("println".equals(methodName) && "(J)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("println".equals(methodName) && "(F)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println(Float.intBitsToFloat(frame.intArguments[1]));
-					return true;
-				} else if ("println".equals(methodName) && "(D)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
-					return true;
-				} else if ("println".equals(methodName) && "([C)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println((char[])frame.objectArguments[1]);
-					return true;
-				} else if ("println".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println((String)frame.objectArguments[1]);
-					return true;
-				} else if ("println".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
-					((PrintStream)toTargetInstance(frame.objectArguments[0])).println((Object)frame.objectArguments[1]);
-					return true;
-				} else if ("checkError".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((PrintStream)toTargetInstance(frame.objectArguments[0])).checkError() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/io/OutputStream", methodName, methodDescriptor);
-				}
-			} else if ("Reader".equals(className)) {
-				if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Reader)toTargetInstance(frame.objectArguments[0])).read();
-					return true;
-				} else if ("read".equals(methodName) && "([C)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Reader)toTargetInstance(frame.objectArguments[0])).read((char[])frame.objectArguments[1]);
-					return true;
-				} else if ("read".equals(methodName) && "([CII)I".equals(methodDescriptor)) {
-					frame.singleReturn = ((Reader)toTargetInstance(frame.objectArguments[0])).read((char[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
-					frame.doubleReturn = ((Reader)toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
-					return true;
-				} else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((Reader)toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
-					return true;
-				} else if ("ready".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Reader)toTargetInstance(frame.objectArguments[0])).ready() ? 1 : 0;
-					return true;
-				} else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Reader)toTargetInstance(frame.objectArguments[0])).reset();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Reader)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
-					frame.singleReturn = ((Reader)toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			} else if ("UnsupportedEncodingException".equals(className)) {
-				return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
-			} else if ("UTFDataFormatException".equals(className)) {
-				return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
-			} else if ("Writer".equals(className)) {
-				if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([C)V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).write((char[])frame.objectArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "([CII)V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).write((char[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("write".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).write((String)frame.objectArguments[1]);
-					return true;
-				} else if ("write".equals(methodName) && "(Ljava/lang/String;II)V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).write((String)frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
-					return true;
-				} else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).flush();
-					return true;
-				} else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
-					((Writer)toTargetInstance(frame.objectArguments[0])).close();
-					return true;
-				} else {
-					return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
-				}
-			}
-		}
+        switch (packageName) {
+            case "java/util":
+                switch (className) {
+                    case "Calendar":
+                        if ("get".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Calendar) toTargetInstance(frame.objectArguments[0])).get(frame.intArguments[1]);
+                            return true;
+                        } else if ("set".equals(methodName) && "(II)V".equals(methodDescriptor)) {
+                            ((Calendar) toTargetInstance(frame.objectArguments[0])).set(frame.intArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("after".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Calendar) toTargetInstance(frame.objectArguments[0])).after((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Calendar) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("before".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Calendar) toTargetInstance(frame.objectArguments[0])).before((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("getTime".equals(methodName) && "()Ljava/util/Date;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Calendar) toTargetInstance(frame.objectArguments[0])).getTime();
+                            return true;
+                        } else if ("setTime".equals(methodName) && "(Ljava/util/Date;)V".equals(methodDescriptor)) {
+                            ((Calendar) toTargetInstance(frame.objectArguments[0])).setTime((Date) frame.objectArguments[1]);
+                            return true;
+                        } else if ("setTimeZone".equals(methodName) && "(Ljava/util/TimeZone;)V".equals(methodDescriptor)) {
+                            ((Calendar) toTargetInstance(frame.objectArguments[0])).setTimeZone((TimeZone) frame.objectArguments[1]);
+                            return true;
+                        } else if ("getTimeZone".equals(methodName) && "()Ljava/util/TimeZone;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Calendar) toTargetInstance(frame.objectArguments[0])).getTimeZone();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Date":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Date) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("getTime".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Date) toTargetInstance(frame.objectArguments[0])).getTime();
+                            return true;
+                        } else if ("setTime".equals(methodName) && "(J)V".equals(methodDescriptor)) {
+                            ((Date) toTargetInstance(frame.objectArguments[0])).setTime(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Date) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Date) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "EmptyStackException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "Hashtable":
+                        if ("get".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).get((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("put".equals(methodName) && "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Hashtable<Object, Object>) toTargetInstance(frame.objectArguments[0])).put((Object) frame.objectArguments[1], (Object) frame.objectArguments[2]);
+                            return true;
+                        } else if ("size".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).size();
+                            return true;
+                        } else if ("keys".equals(methodName) && "()Ljava/util/Enumeration;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).keys();
+                            return true;
+                        } else if ("clear".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Hashtable) toTargetInstance(frame.objectArguments[0])).clear();
+                            return true;
+                        } else if ("remove".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).remove((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("isEmpty".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).isEmpty() ? 1 : 0;
+                            return true;
+                        } else if ("elements".equals(methodName) && "()Ljava/util/Enumeration;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).elements();
+                            return true;
+                        } else if ("contains".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).contains((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("containsKey".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Hashtable) toTargetInstance(frame.objectArguments[0])).containsKey((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "NoSuchElementException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "Random":
+                        if ("setSeed".equals(methodName) && "(J)V".equals(methodDescriptor)) {
+                            ((Random) toTargetInstance(frame.objectArguments[0])).setSeed(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("nextInt".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Random) toTargetInstance(frame.objectArguments[0])).nextInt();
+                            return true;
+                        } else if ("nextInt".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Random) toTargetInstance(frame.objectArguments[0])).nextInt(frame.intArguments[1]);
+                            return true;
+                        } else if ("nextLong".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Random) toTargetInstance(frame.objectArguments[0])).nextLong();
+                            return true;
+                        } else if ("nextFloat".equals(methodName) && "()F".equals(methodDescriptor)) {
+                            frame.singleReturn = Float.floatToIntBits(((Random) toTargetInstance(frame.objectArguments[0])).nextFloat());
+                            return true;
+                        } else if ("nextDouble".equals(methodName) && "()D".equals(methodDescriptor)) {
+                            frame.doubleReturn = Double.doubleToLongBits(((Random) toTargetInstance(frame.objectArguments[0])).nextDouble());
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Stack":
+                        if ("pop".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Stack) toTargetInstance(frame.objectArguments[0])).pop();
+                            return true;
+                        } else if ("push".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Stack<Object>) toTargetInstance(frame.objectArguments[0])).push((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("peek".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Stack) toTargetInstance(frame.objectArguments[0])).peek();
+                            return true;
+                        } else if ("empty".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Stack) toTargetInstance(frame.objectArguments[0])).empty() ? 1 : 0;
+                            return true;
+                        } else if ("search".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Stack) toTargetInstance(frame.objectArguments[0])).search((Object) frame.objectArguments[1]);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/util/Vector", methodName, methodDescriptor);
+                        }
+                    case "TimeZone":
+                        if ("getID".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((TimeZone) toTargetInstance(frame.objectArguments[0])).getID();
+                            return true;
+                        } else if ("getOffset".equals(methodName) && "(IIIIII)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((TimeZone) toTargetInstance(frame.objectArguments[0])).getOffset(frame.intArguments[1], frame.intArguments[2], frame.intArguments[3], frame.intArguments[4], frame.intArguments[5], frame.intArguments[6]);
+                            return true;
+                        } else if ("getRawOffset".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((TimeZone) toTargetInstance(frame.objectArguments[0])).getRawOffset();
+                            return true;
+                        } else if ("useDaylightTime".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((TimeZone) toTargetInstance(frame.objectArguments[0])).useDaylightTime() ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Vector":
+                        if ("size".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).size();
+                            return true;
+                        } else if ("setSize".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((Vector) toTargetInstance(frame.objectArguments[0])).setSize(frame.intArguments[1]);
+                            return true;
+                        } else if ("isEmpty".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).isEmpty() ? 1 : 0;
+                            return true;
+                        } else if ("indexOf".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).indexOf((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("indexOf".equals(methodName) && "(Ljava/lang/Object;I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).indexOf((Object) frame.objectArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("copyInto".equals(methodName) && "([Ljava/lang/Object;)V".equals(methodDescriptor)) {
+                            ((Vector) toTargetInstance(frame.objectArguments[0])).copyInto((Object[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("capacity".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).capacity();
+                            return true;
+                        } else if ("elements".equals(methodName) && "()Ljava/util/Enumeration;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).elements();
+                            return true;
+                        } else if ("contains".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).contains((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("elementAt".equals(methodName) && "(I)Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).elementAt(frame.intArguments[1]);
+                            return true;
+                        } else if ("trimToSize".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Vector) toTargetInstance(frame.objectArguments[0])).trimToSize();
+                            return true;
+                        } else if ("addElement".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
+                            ((Vector<Object>) toTargetInstance(frame.objectArguments[0])).addElement((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("lastIndexOf".equals(methodName) && "(Ljava/lang/Object;)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).lastIndexOf((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("lastIndexOf".equals(methodName) && "(Ljava/lang/Object;I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).lastIndexOf((Object) frame.objectArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("lastElement".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).lastElement();
+                            return true;
+                        } else if ("firstElement".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).firstElement();
+                            return true;
+                        } else if ("setElementAt".equals(methodName) && "(Ljava/lang/Object;I)V".equals(methodDescriptor)) {
+                            ((Vector<Object>) toTargetInstance(frame.objectArguments[0])).setElementAt((Object) frame.objectArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("removeElement".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Vector) toTargetInstance(frame.objectArguments[0])).removeElement((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("ensureCapacity".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((Vector) toTargetInstance(frame.objectArguments[0])).ensureCapacity(frame.intArguments[1]);
+                            return true;
+                        } else if ("removeElementAt".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((Vector) toTargetInstance(frame.objectArguments[0])).removeElementAt(frame.intArguments[1]);
+                            return true;
+                        } else if ("insertElementAt".equals(methodName) && "(Ljava/lang/Object;I)V".equals(methodDescriptor)) {
+                            ((Vector<Object>) toTargetInstance(frame.objectArguments[0])).insertElementAt((Object) frame.objectArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("removeAllElements".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Vector) toTargetInstance(frame.objectArguments[0])).removeAllElements();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                }
+                break;
+            case "java/lang/ref":
+                if ("Reference".equals(className)) {
+                    if ("get".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                        frame.objectReturn = ((Reference) toTargetInstance(frame.objectArguments[0])).get();
+                        return true;
+                    } else if ("clear".equals(methodName) && "()V".equals(methodDescriptor)) {
+                        ((Reference) toTargetInstance(frame.objectArguments[0])).clear();
+                        return true;
+                    } else {
+                        return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                    }
+                } else if ("WeakReference".equals(className)) {
+                    return handleInstanceMethod(frame, "java/lang/ref/Reference", methodName, methodDescriptor);
+                }
+                break;
+            case "java/lang":
+                switch (className) {
+                    case "ArithmeticException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "ArrayIndexOutOfBoundsException":
+                        return handleInstanceMethod(frame, "java/lang/IndexOutOfBoundsException", methodName, methodDescriptor);
+                    case "ArrayStoreException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "Boolean":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Boolean) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Boolean) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Boolean) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("booleanValue".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = (Boolean) toTargetInstance(frame.objectArguments[0]) ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Byte":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Byte) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Byte) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Byte) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
+                            frame.singleReturn = (Byte) toTargetInstance(frame.objectArguments[0]);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Character":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Character) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Character) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Character) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("charValue".equals(methodName) && "()C".equals(methodDescriptor)) {
+                            frame.singleReturn = (Character) toTargetInstance(frame.objectArguments[0]);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Class":
+                        if ("isArray".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Class) toTargetInstance(frame.objectArguments[0])).isArray() ? 1 : 0;
+                            return true;
+                        } else if ("getName".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Class) toTargetInstance(frame.objectArguments[0])).getName();
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Class) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("isInstance".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Class) toTargetInstance(frame.objectArguments[0])).isInstance((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("newInstance".equals(methodName) && "()Ljava/lang/Object;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Class) toTargetInstance(frame.objectArguments[0])).newInstance();
+                            return true;
+                        } else if ("isInterface".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Class) toTargetInstance(frame.objectArguments[0])).isInterface() ? 1 : 0;
+                            return true;
+                        } else if ("isAssignableFrom".equals(methodName) && "(Ljava/lang/Class;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Class) toTargetInstance(frame.objectArguments[0])).isAssignableFrom((Class) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("getResourceAsStream".equals(methodName) && "(Ljava/lang/String;)Ljava/io/InputStream;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Class) toTargetInstance(frame.objectArguments[0])).getResourceAsStream((String) frame.objectArguments[1]);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "ClassCastException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "ClassNotFoundException":
+                        return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
+                    case "Double":
+                        if ("isNaN".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).isNaN() ? 1 : 0;
+                            return true;
+                        } else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Double) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("intValue".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).intValue();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).byteValue();
+                            return true;
+                        } else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).longValue();
+                            return true;
+                        } else if ("isInfinite".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).isInfinite() ? 1 : 0;
+                            return true;
+                        } else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Double) toTargetInstance(frame.objectArguments[0])).shortValue();
+                            return true;
+                        } else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
+                            frame.singleReturn = Float.floatToIntBits(((Double) toTargetInstance(frame.objectArguments[0])).floatValue());
+                            return true;
+                        } else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
+                            frame.doubleReturn = Double.doubleToLongBits((Double) toTargetInstance(frame.objectArguments[0]));
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Error":
+                        return handleInstanceMethod(frame, "java/lang/Throwable", methodName, methodDescriptor);
+                    case "Exception":
+                        return handleInstanceMethod(frame, "java/lang/Throwable", methodName, methodDescriptor);
+                    case "Float":
+                        if ("isNaN".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).isNaN() ? 1 : 0;
+                            return true;
+                        } else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Float) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("intValue".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).intValue();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).byteValue();
+                            return true;
+                        } else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).longValue();
+                            return true;
+                        } else if ("isInfinite".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).isInfinite() ? 1 : 0;
+                            return true;
+                        } else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Float) toTargetInstance(frame.objectArguments[0])).shortValue();
+                            return true;
+                        } else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
+                            frame.singleReturn = Float.floatToIntBits((Float) toTargetInstance(frame.objectArguments[0]));
+                            return true;
+                        } else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
+                            frame.doubleReturn = Double.doubleToLongBits(((Float) toTargetInstance(frame.objectArguments[0])).doubleValue());
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "IllegalAccessException":
+                        return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
+                    case "IllegalArgumentException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "IllegalMonitorStateException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "IllegalThreadStateException":
+                        return handleInstanceMethod(frame, "java/lang/IllegalArgumentException", methodName, methodDescriptor);
+                    case "IndexOutOfBoundsException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "InstantiationException":
+                        return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
+                    case "Integer":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Integer) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("intValue".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = (Integer) toTargetInstance(frame.objectArguments[0]);
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Integer) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Integer) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("byteValue".equals(methodName) && "()B".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Integer) toTargetInstance(frame.objectArguments[0])).byteValue();
+                            return true;
+                        } else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Integer) toTargetInstance(frame.objectArguments[0])).longValue();
+                            return true;
+                        } else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Integer) toTargetInstance(frame.objectArguments[0])).shortValue();
+                            return true;
+                        } else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
+                            frame.singleReturn = Float.floatToIntBits(((Integer) toTargetInstance(frame.objectArguments[0])).floatValue());
+                            return true;
+                        } else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
+                            frame.doubleReturn = Double.doubleToLongBits(((Integer) toTargetInstance(frame.objectArguments[0])).doubleValue());
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "InterruptedException":
+                        return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
+                    case "Long":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Long) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Long) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Long) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("longValue".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = (Long) toTargetInstance(frame.objectArguments[0]);
+                            return true;
+                        } else if ("floatValue".equals(methodName) && "()F".equals(methodDescriptor)) {
+                            frame.singleReturn = Float.floatToIntBits(((Long) toTargetInstance(frame.objectArguments[0])).floatValue());
+                            return true;
+                        } else if ("doubleValue".equals(methodName) && "()D".equals(methodDescriptor)) {
+                            frame.doubleReturn = Double.doubleToLongBits(((Long) toTargetInstance(frame.objectArguments[0])).doubleValue());
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "Math":
+                        return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                    case "NegativeArraySizeException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "NoClassDefFoundError":
+                        return handleInstanceMethod(frame, "java/lang/Error", methodName, methodDescriptor);
+                    case "NullPointerException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "NumberFormatException":
+                        return handleInstanceMethod(frame, "java/lang/IllegalArgumentException", methodName, methodDescriptor);
+                    case "OutOfMemoryError":
+                        return handleInstanceMethod(frame, "java/lang/VirtualMachineError", methodName, methodDescriptor);
+                    case "Runtime":
+                        if ("gc".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Runtime) toTargetInstance(frame.objectArguments[0])).gc();
+                            return true;
+                        } else if ("exit".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((Runtime) toTargetInstance(frame.objectArguments[0])).exit(frame.intArguments[1]);
+                            return true;
+                        } else if ("freeMemory".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Runtime) toTargetInstance(frame.objectArguments[0])).freeMemory();
+                            return true;
+                        } else if ("totalMemory".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Runtime) toTargetInstance(frame.objectArguments[0])).totalMemory();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "RuntimeException":
+                        return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
+                    case "SecurityException":
+                        return handleInstanceMethod(frame, "java/lang/RuntimeException", methodName, methodDescriptor);
+                    case "Short":
+                        if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Short) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Short) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Short) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("shortValue".equals(methodName) && "()S".equals(methodDescriptor)) {
+                            frame.singleReturn = (Short) toTargetInstance(frame.objectArguments[0]);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "String":
+                        if ("trim".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).trim();
+                            return true;
+                        } else if ("length".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).length();
+                            return true;
+                        } else if ("charAt".equals(methodName) && "(I)C".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).charAt(frame.intArguments[1]);
+                            return true;
+                        } else if ("equals".equals(methodName) && "(Ljava/lang/Object;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).equals((Object) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("concat".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).concat((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("intern".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).intern();
+                            return true;
+                        } else if ("indexOf".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).indexOf(frame.intArguments[1]);
+                            return true;
+                        } else if ("indexOf".equals(methodName) && "(II)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).indexOf(frame.intArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("indexOf".equals(methodName) && "(Ljava/lang/String;)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).indexOf((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("indexOf".equals(methodName) && "(Ljava/lang/String;I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).indexOf((String) frame.objectArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("replace".equals(methodName) && "(CC)Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).replace((char) frame.intArguments[1], (char) frame.intArguments[2]);
+                            return true;
+                        } else if ("getChars".equals(methodName) && "(II[CI)V".equals(methodDescriptor)) {
+                            ((String) toTargetInstance(frame.objectArguments[0])).getChars(frame.intArguments[1], frame.intArguments[2], (char[]) frame.objectArguments[3], frame.intArguments[4]);
+                            return true;
+                        } else if ("getBytes".equals(methodName) && "(Ljava/lang/String;)[B".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).getBytes((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("getBytes".equals(methodName) && "()[B".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).getBytes();
+                            return true;
+                        } else if ("endsWith".equals(methodName) && "(Ljava/lang/String;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).endsWith((String) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("hashCode".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).hashCode();
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0]));
+                            return true;
+                        } else if ("compareTo".equals(methodName) && "(Ljava/lang/String;)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).compareTo((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("substring".equals(methodName) && "(I)Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).substring(frame.intArguments[1]);
+                            return true;
+                        } else if ("substring".equals(methodName) && "(II)Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).substring(frame.intArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("startsWith".equals(methodName) && "(Ljava/lang/String;I)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).startsWith((String) frame.objectArguments[1], frame.intArguments[2]) ? 1 : 0;
+                            return true;
+                        } else if ("startsWith".equals(methodName) && "(Ljava/lang/String;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).startsWith((String) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else if ("lastIndexOf".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).lastIndexOf(frame.intArguments[1]);
+                            return true;
+                        } else if ("lastIndexOf".equals(methodName) && "(II)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).lastIndexOf(frame.intArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("toLowerCase".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).toLowerCase();
+                            return true;
+                        } else if ("toUpperCase".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).toUpperCase();
+                            return true;
+                        } else if ("toCharArray".equals(methodName) && "()[C".equals(methodDescriptor)) {
+                            frame.objectReturn = ((String) toTargetInstance(frame.objectArguments[0])).toCharArray();
+                            return true;
+                        } else if ("regionMatches".equals(methodName) && "(ZILjava/lang/String;II)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).regionMatches(frame.intArguments[1] != 0, frame.intArguments[2], (String) frame.objectArguments[3], frame.intArguments[4], frame.intArguments[5]) ? 1 : 0;
+                            return true;
+                        } else if ("equalsIgnoreCase".equals(methodName) && "(Ljava/lang/String;)Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((String) toTargetInstance(frame.objectArguments[0])).equalsIgnoreCase((String) frame.objectArguments[1]) ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "StringBuffer":
+                        if ("length".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).length();
+                            return true;
+                        } else if ("charAt".equals(methodName) && "(I)C".equals(methodDescriptor)) {
+                            frame.singleReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).charAt(frame.intArguments[1]);
+                            return true;
+                        } else if ("append".equals(methodName) && "(Ljava/lang/Object;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("append".equals(methodName) && "(Ljava/lang/String;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("append".equals(methodName) && "([C)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append((char[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("append".equals(methodName) && "([CII)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append((char[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("append".equals(methodName) && "(Z)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append(frame.intArguments[1] != 0);
+                            return true;
+                        } else if ("append".equals(methodName) && "(C)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append((char) frame.intArguments[1]);
+                            return true;
+                        } else if ("append".equals(methodName) && "(I)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append(frame.intArguments[1]);
+                            return true;
+                        } else if ("append".equals(methodName) && "(J)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("append".equals(methodName) && "(F)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append(Float.intBitsToFloat(frame.intArguments[1]));
+                            return true;
+                        } else if ("append".equals(methodName) && "(D)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).append(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
+                            return true;
+                        } else if ("delete".equals(methodName) && "(II)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).delete(frame.intArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(ILjava/lang/Object;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (Object) frame.objectArguments[2]);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(ILjava/lang/String;)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (String) frame.objectArguments[2]);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(I[C)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (char[]) frame.objectArguments[2]);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(IZ)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], frame.intArguments[2] != 0);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(IC)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], (char) frame.intArguments[2]);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(II)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], frame.intArguments[2]);
+                            return true;
+                        } else if ("insert".equals(methodName) && "(IJ)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], getLong(frame.intArguments, 2));
+                            return true;
+                        } else if ("insert".equals(methodName) && "(IF)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], Float.intBitsToFloat(frame.intArguments[2]));
+                            return true;
+                        } else if ("insert".equals(methodName) && "(ID)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).insert(frame.intArguments[1], Double.longBitsToDouble(Utils.getLong(frame.intArguments, 2)));
+                            return true;
+                        } else if ("reverse".equals(methodName) && "()Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).reverse();
+                            return true;
+                        } else if ("capacity".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).capacity();
+                            return true;
+                        } else if ("getChars".equals(methodName) && "(II[CI)V".equals(methodDescriptor)) {
+                            ((StringBuffer) toTargetInstance(frame.objectArguments[0])).getChars(frame.intArguments[1], frame.intArguments[2], (char[]) frame.objectArguments[3], frame.intArguments[4]);
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("setLength".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((StringBuffer) toTargetInstance(frame.objectArguments[0])).setLength(frame.intArguments[1]);
+                            return true;
+                        } else if ("setCharAt".equals(methodName) && "(IC)V".equals(methodDescriptor)) {
+                            ((StringBuffer) toTargetInstance(frame.objectArguments[0])).setCharAt(frame.intArguments[1], (char) frame.intArguments[2]);
+                            return true;
+                        } else if ("deleteCharAt".equals(methodName) && "(I)Ljava/lang/StringBuffer;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((StringBuffer) toTargetInstance(frame.objectArguments[0])).deleteCharAt(frame.intArguments[1]);
+                            return true;
+                        } else if ("ensureCapacity".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((StringBuffer) toTargetInstance(frame.objectArguments[0])).ensureCapacity(frame.intArguments[1]);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "StringIndexOutOfBoundsException":
+                        return handleInstanceMethod(frame, "java/lang/IndexOutOfBoundsException", methodName, methodDescriptor);
+                    case "System":
+                        return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                    case "Throwable":
+                        if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Throwable) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("getMessage".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((Throwable) toTargetInstance(frame.objectArguments[0])).getMessage();
+                            return true;
+                        } else if ("printStackTrace".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Throwable) toTargetInstance(frame.objectArguments[0])).printStackTrace();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "VirtualMachineError":
+                        return handleInstanceMethod(frame, "java/lang/Error", methodName, methodDescriptor);
+                }
+                break;
+            case "java/io":
+                switch (className) {
+                    case "ByteArrayInputStream":
+                        if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).read();
+                            return true;
+                        } else if ("read".equals(methodName) && "([BII)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).read((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
+                            return true;
+                        } else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).reset();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("available".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).available();
+                            return true;
+                        } else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((ByteArrayInputStream) toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/InputStream", methodName, methodDescriptor);
+                        }
+                    case "ByteArrayOutputStream":
+                        if ("size".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).size();
+                            return true;
+                        } else if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                            ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).reset();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("toString".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).toString();
+                            return true;
+                        } else if ("toByteArray".equals(methodName) && "()[B".equals(methodDescriptor)) {
+                            frame.objectReturn = ((ByteArrayOutputStream) toTargetInstance(frame.objectArguments[0])).toByteArray();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/OutputStream", methodName, methodDescriptor);
+                        }
+                    case "DataInputStream":
+                        if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).read();
+                            return true;
+                        } else if ("read".equals(methodName) && "([B)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).read((byte[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("read".equals(methodName) && "([BII)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).read((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((DataInputStream) toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((DataInputStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((DataInputStream) toTargetInstance(frame.objectArguments[0])).reset();
+                            return true;
+                        } else if ("readInt".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readInt();
+                            return true;
+                        } else if ("readUTF".equals(methodName) && "()Ljava/lang/String;".equals(methodDescriptor)) {
+                            frame.objectReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readUTF();
+                            return true;
+                        } else if ("readByte".equals(methodName) && "()B".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readByte();
+                            return true;
+                        } else if ("readChar".equals(methodName) && "()C".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readChar();
+                            return true;
+                        } else if ("readLong".equals(methodName) && "()J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readLong();
+                            return true;
+                        } else if ("readFully".equals(methodName) && "([B)V".equals(methodDescriptor)) {
+                            ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readFully((byte[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("readFully".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                            ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readFully((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("skipBytes".equals(methodName) && "(I)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).skipBytes(frame.intArguments[1]);
+                            return true;
+                        } else if ("readShort".equals(methodName) && "()S".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readShort();
+                            return true;
+                        } else if ("readFloat".equals(methodName) && "()F".equals(methodDescriptor)) {
+                            frame.singleReturn = Float.floatToIntBits(((DataInputStream) toTargetInstance(frame.objectArguments[0])).readFloat());
+                            return true;
+                        } else if ("available".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).available();
+                            return true;
+                        } else if ("readDouble".equals(methodName) && "()D".equals(methodDescriptor)) {
+                            frame.doubleReturn = Double.doubleToLongBits(((DataInputStream) toTargetInstance(frame.objectArguments[0])).readDouble());
+                            return true;
+                        } else if ("readBoolean".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readBoolean() ? 1 : 0;
+                            return true;
+                        } else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
+                            return true;
+                        } else if ("readUnsignedByte".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readUnsignedByte();
+                            return true;
+                        } else if ("readUnsignedShort".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((DataInputStream) toTargetInstance(frame.objectArguments[0])).readUnsignedShort();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/InputStream", methodName, methodDescriptor);
+                        }
+                    case "DataOutputStream":
+                        if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).flush();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("writeInt".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeInt(frame.intArguments[1]);
+                            return true;
+                        } else if ("writeUTF".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeUTF((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("writeByte".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeByte(frame.intArguments[1]);
+                            return true;
+                        } else if ("writeChar".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeChar(frame.intArguments[1]);
+                            return true;
+                        } else if ("writeLong".equals(methodName) && "(J)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeLong(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("writeShort".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeShort(frame.intArguments[1]);
+                            return true;
+                        } else if ("writeFloat".equals(methodName) && "(F)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeFloat(Float.intBitsToFloat(frame.intArguments[1]));
+                            return true;
+                        } else if ("writeChars".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeChars((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("writeDouble".equals(methodName) && "(D)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeDouble(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
+                            return true;
+                        } else if ("writeBoolean".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
+                            ((DataOutputStream) toTargetInstance(frame.objectArguments[0])).writeBoolean(frame.intArguments[1] != 0);
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/OutputStream", methodName, methodDescriptor);
+                        }
+                    case "EOFException":
+                        return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
+                    case "InputStream":
+                        if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStream) toTargetInstance(frame.objectArguments[0])).read();
+                            return true;
+                        } else if ("read".equals(methodName) && "([B)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStream) toTargetInstance(frame.objectArguments[0])).read((byte[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("read".equals(methodName) && "([BII)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStream) toTargetInstance(frame.objectArguments[0])).read((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((InputStream) toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((InputStream) toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((InputStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((InputStream) toTargetInstance(frame.objectArguments[0])).reset();
+                            return true;
+                        } else if ("available".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStream) toTargetInstance(frame.objectArguments[0])).available();
+                            return true;
+                        } else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStream) toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "InputStreamReader":
+                        if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).read();
+                            return true;
+                        } else if ("read".equals(methodName) && "([CII)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).read((char[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
+                            return true;
+                        } else if ("ready".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).ready() ? 1 : 0;
+                            return true;
+                        } else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).reset();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((InputStreamReader) toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/Reader", methodName, methodDescriptor);
+                        }
+                    case "InterruptedIOException":
+                        return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
+                    case "IOException":
+                        return handleInstanceMethod(frame, "java/lang/Exception", methodName, methodDescriptor);
+                    case "OutputStream":
+                        if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((OutputStream) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([B)V".equals(methodDescriptor)) {
+                            ((OutputStream) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                            ((OutputStream) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((OutputStream) toTargetInstance(frame.objectArguments[0])).flush();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((OutputStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "OutputStreamWriter":
+                        if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((OutputStreamWriter) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([CII)V".equals(methodDescriptor)) {
+                            ((OutputStreamWriter) toTargetInstance(frame.objectArguments[0])).write((char[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("write".equals(methodName) && "(Ljava/lang/String;II)V".equals(methodDescriptor)) {
+                            ((OutputStreamWriter) toTargetInstance(frame.objectArguments[0])).write((String) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((OutputStreamWriter) toTargetInstance(frame.objectArguments[0])).flush();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((OutputStreamWriter) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/Writer", methodName, methodDescriptor);
+                        }
+                    case "PrintStream":
+                        if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).flush();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([BII)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).write((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("print".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print(frame.intArguments[1] != 0);
+                            return true;
+                        } else if ("print".equals(methodName) && "(C)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print((char) frame.intArguments[1]);
+                            return true;
+                        } else if ("print".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print(frame.intArguments[1]);
+                            return true;
+                        } else if ("print".equals(methodName) && "(J)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("print".equals(methodName) && "(F)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print(Float.intBitsToFloat(frame.intArguments[1]));
+                            return true;
+                        } else if ("print".equals(methodName) && "(D)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
+                            return true;
+                        } else if ("print".equals(methodName) && "([C)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print((char[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("print".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("print".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).print((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("println".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println();
+                            return true;
+                        } else if ("println".equals(methodName) && "(Z)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println(frame.intArguments[1] != 0);
+                            return true;
+                        } else if ("println".equals(methodName) && "(C)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println((char) frame.intArguments[1]);
+                            return true;
+                        } else if ("println".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println(frame.intArguments[1]);
+                            return true;
+                        } else if ("println".equals(methodName) && "(J)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("println".equals(methodName) && "(F)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println(Float.intBitsToFloat(frame.intArguments[1]));
+                            return true;
+                        } else if ("println".equals(methodName) && "(D)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
+                            return true;
+                        } else if ("println".equals(methodName) && "([C)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println((char[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("println".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("println".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
+                            ((PrintStream) toTargetInstance(frame.objectArguments[0])).println((Object) frame.objectArguments[1]);
+                            return true;
+                        } else if ("checkError".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((PrintStream) toTargetInstance(frame.objectArguments[0])).checkError() ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/io/OutputStream", methodName, methodDescriptor);
+                        }
+                    case "Reader":
+                        if ("read".equals(methodName) && "()I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Reader) toTargetInstance(frame.objectArguments[0])).read();
+                            return true;
+                        } else if ("read".equals(methodName) && "([C)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Reader) toTargetInstance(frame.objectArguments[0])).read((char[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("read".equals(methodName) && "([CII)I".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Reader) toTargetInstance(frame.objectArguments[0])).read((char[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("skip".equals(methodName) && "(J)J".equals(methodDescriptor)) {
+                            frame.doubleReturn = ((Reader) toTargetInstance(frame.objectArguments[0])).skip(getLong(frame.intArguments, 1));
+                            return true;
+                        } else if ("mark".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((Reader) toTargetInstance(frame.objectArguments[0])).mark(frame.intArguments[1]);
+                            return true;
+                        } else if ("ready".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Reader) toTargetInstance(frame.objectArguments[0])).ready() ? 1 : 0;
+                            return true;
+                        } else if ("reset".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Reader) toTargetInstance(frame.objectArguments[0])).reset();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Reader) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else if ("markSupported".equals(methodName) && "()Z".equals(methodDescriptor)) {
+                            frame.singleReturn = ((Reader) toTargetInstance(frame.objectArguments[0])).markSupported() ? 1 : 0;
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                    case "UnsupportedEncodingException":
+                        return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
+                    case "UTFDataFormatException":
+                        return handleInstanceMethod(frame, "java/io/IOException", methodName, methodDescriptor);
+                    case "Writer":
+                        if ("write".equals(methodName) && "(I)V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).write(frame.intArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([C)V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).write((char[]) frame.objectArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "([CII)V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).write((char[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("write".equals(methodName) && "(Ljava/lang/String;)V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).write((String) frame.objectArguments[1]);
+                            return true;
+                        } else if ("write".equals(methodName) && "(Ljava/lang/String;II)V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).write((String) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]);
+                            return true;
+                        } else if ("flush".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).flush();
+                            return true;
+                        } else if ("close".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            ((Writer) toTargetInstance(frame.objectArguments[0])).close();
+                            return true;
+                        } else {
+                            return handleInstanceMethod(frame, "java/lang/Object", methodName, methodDescriptor);
+                        }
+                }
+                break;
+        }
 		// }
 		// replace existing classes to add special code
 		if ("java/lang".equals(packageName)) {
@@ -2170,487 +2195,532 @@ public class VirtualMachine {
 		// CONSTRUCTOR SECTION {
 		String packageName = absoluteClassName.substring(0, absoluteClassName.lastIndexOf('/'));
 		String className = absoluteClassName.substring(absoluteClassName.lastIndexOf('/') + 1);
-		if ("java/util".equals(packageName)) {
-			if ("Date".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Date());
-					return true;
-				} else if ("(J)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Date(getLong(frame.intArguments, 1)));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("EmptyStackException".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new EmptyStackException());
-				return true;
-			} else if ("Hashtable".equals(className)) {
-				if ("(I)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Hashtable(frame.intArguments[1]));
-					return true;
-				} else if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Hashtable());
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("NoSuchElementException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NoSuchElementException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NoSuchElementException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Random".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Random());
-					return true;
-				} else if ("(J)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Random(getLong(frame.intArguments, 1)));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Stack".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Stack());
-				return true;
-			} else if ("Vector".equals(className)) {
-				if ("(II)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Vector(frame.intArguments[1], frame.intArguments[2]));
-					return true;
-				} else if ("(I)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Vector(frame.intArguments[1]));
-					return true;
-				} else if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Vector());
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} else if ("java/lang/ref".equals(packageName)) {
-			if ("WeakReference".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new WeakReference((Object)frame.objectArguments[1]));
-				return true;
-			}
-		} else if ("java/lang".equals(packageName)) {
-			if ("ArithmeticException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArithmeticException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArithmeticException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("ArrayIndexOutOfBoundsException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArrayIndexOutOfBoundsException());
-					return true;
-				} else if ("(I)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArrayIndexOutOfBoundsException(frame.intArguments[1]));
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArrayIndexOutOfBoundsException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("ArrayStoreException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArrayStoreException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ArrayStoreException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Boolean".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], Boolean.valueOf(frame.intArguments[1] != 0));
-				return true;
-			} else if ("Byte".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Byte((byte)frame.intArguments[1]));
-				return true;
-			} else if ("Character".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Character((char)frame.intArguments[1]));
-				return true;
-			} else if ("ClassCastException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ClassCastException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ClassCastException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("ClassNotFoundException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ClassNotFoundException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ClassNotFoundException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Double".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Double(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1))));
-				return true;
-			} else if ("Error".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Error());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Error((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Exception".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Exception());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Exception((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Float".equals(className)) {
-				if ("(F)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Float(Float.intBitsToFloat(frame.intArguments[1])));
-					return true;
-				} else if ("(D)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Float(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1))));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("IllegalAccessException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalAccessException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalAccessException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("IllegalArgumentException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalArgumentException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalArgumentException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("IllegalMonitorStateException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalMonitorStateException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalMonitorStateException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("IllegalThreadStateException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalThreadStateException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IllegalThreadStateException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("IndexOutOfBoundsException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IndexOutOfBoundsException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IndexOutOfBoundsException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("InstantiationException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InstantiationException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InstantiationException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Integer".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Integer(frame.intArguments[1]));
-				return true;
-			} else if ("InterruptedException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InterruptedException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InterruptedException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Long".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Long(getLong(frame.intArguments, 1)));
-				return true;
-			} else if ("NegativeArraySizeException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NegativeArraySizeException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NegativeArraySizeException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("NoClassDefFoundError".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NoClassDefFoundError());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NoClassDefFoundError((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("NullPointerException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NullPointerException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NullPointerException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("NumberFormatException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NumberFormatException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new NumberFormatException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("OutOfMemoryError".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new OutOfMemoryError());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new OutOfMemoryError((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("RuntimeException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new RuntimeException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new RuntimeException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("SecurityException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new SecurityException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new SecurityException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Short".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new Short((short)frame.intArguments[1]));
-				return true;
-			} else if ("String".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], "");
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], (String) frame.objectArguments[1]);
-					return true;
-				} else if ("([C)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((char[])frame.objectArguments[1]));
-					return true;
-				} else if ("([CII)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((char[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]));
-					return true;
-				} else if ("([BIILjava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3], (String)frame.objectArguments[4]));
-					return true;
-				} else if ("([BLjava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((byte[])frame.objectArguments[1], (String)frame.objectArguments[2]));
-					return true;
-				} else if ("([BII)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]));
-					return true;
-				} else if ("([B)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((byte[])frame.objectArguments[1]));
-					return true;
-				} else if ("(Ljava/lang/StringBuffer;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new String((StringBuffer)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("StringBuffer".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new StringBuffer());
-					return true;
-				} else if ("(I)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new StringBuffer(frame.intArguments[1]));
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new StringBuffer((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("StringIndexOutOfBoundsException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new StringIndexOutOfBoundsException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new StringIndexOutOfBoundsException((String)frame.objectArguments[1]));
-					return true;
-				} else if ("(I)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new StringIndexOutOfBoundsException(frame.intArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("Throwable".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Throwable());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Throwable((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} else if ("java/io".equals(packageName)) {
-			if ("ByteArrayInputStream".equals(className)) {
-				if ("([B)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ByteArrayInputStream((byte[])frame.objectArguments[1]));
-					return true;
-				} else if ("([BII)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ByteArrayInputStream((byte[])frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("ByteArrayOutputStream".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ByteArrayOutputStream());
-					return true;
-				} else if ("(I)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new ByteArrayOutputStream(frame.intArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("DataInputStream".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new DataInputStream((InputStream)frame.objectArguments[1]));
-				return true;
-			} else if ("DataOutputStream".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new DataOutputStream((OutputStream)frame.objectArguments[1]));
-				return true;
-			} else if ("EOFException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new EOFException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new EOFException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("InputStreamReader".equals(className)) {
-				if ("(Ljava/io/InputStream;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InputStreamReader((InputStream)frame.objectArguments[1]));
-					return true;
-				} else if ("(Ljava/io/InputStream;Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InputStreamReader((InputStream)frame.objectArguments[1], (String)frame.objectArguments[2]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("InterruptedIOException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InterruptedIOException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new InterruptedIOException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("IOException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IOException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new IOException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("OutputStreamWriter".equals(className)) {
-				if ("(Ljava/io/OutputStream;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new OutputStreamWriter((OutputStream)frame.objectArguments[1]));
-					return true;
-				} else if ("(Ljava/io/OutputStream;Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new OutputStreamWriter((OutputStream)frame.objectArguments[1], (String)frame.objectArguments[2]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("PrintStream".equals(className) && "<init>".equals(methodName)) {
-				replaceObjects(frame, frame.objectArguments[0], new PrintStream((OutputStream)frame.objectArguments[1]));
-				return true;
-			} else if ("UnsupportedEncodingException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new UnsupportedEncodingException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new UnsupportedEncodingException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			} else if ("UTFDataFormatException".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new UTFDataFormatException());
-					return true;
-				} else if ("(Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new UTFDataFormatException((String)frame.objectArguments[1]));
-					return true;
-				} else {
-					return false;
-				}
-			}
-		}
+        switch (packageName) {
+            case "java/util":
+                if ("Date".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Date());
+                            return true;
+                        case "(J)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Date(getLong(frame.intArguments, 1)));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("EmptyStackException".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], new EmptyStackException());
+                    return true;
+                } else if ("Hashtable".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "(I)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Hashtable(frame.intArguments[1]));
+                            return true;
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Hashtable());
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("NoSuchElementException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new NoSuchElementException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new NoSuchElementException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Random".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Random());
+                            return true;
+                        case "(J)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Random(getLong(frame.intArguments, 1)));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Stack".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], new Stack());
+                    return true;
+                } else if ("Vector".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "(II)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Vector(frame.intArguments[1], frame.intArguments[2]));
+                            return true;
+                        case "(I)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Vector(frame.intArguments[1]));
+                            return true;
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Vector());
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+                break;
+            case "java/lang/ref":
+                if ("WeakReference".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], new WeakReference<>((Object) frame.objectArguments[1]));
+                    return true;
+                }
+                break;
+            case "java/lang":
+                if ("ArithmeticException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArithmeticException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArithmeticException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("ArrayIndexOutOfBoundsException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArrayIndexOutOfBoundsException());
+                            return true;
+                        case "(I)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArrayIndexOutOfBoundsException(frame.intArguments[1]));
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArrayIndexOutOfBoundsException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("ArrayStoreException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArrayStoreException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ArrayStoreException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Boolean".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], frame.intArguments[1] != 0);
+                    return true;
+                } else if ("Byte".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], (byte) frame.intArguments[1]);
+                    return true;
+                } else if ("Character".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], (char) frame.intArguments[1]);
+                    return true;
+                } else if ("ClassCastException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new ClassCastException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ClassCastException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("ClassNotFoundException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new ClassNotFoundException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ClassNotFoundException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Double".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1)));
+                    return true;
+                } else if ("Error".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Error());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Error((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Exception".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Exception());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Exception((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Float".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "(F)V":
+                            replaceObjects(frame, frame.objectArguments[0], Float.intBitsToFloat(frame.intArguments[1]));
+                            return true;
+                        case "(D)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Float(Double.longBitsToDouble(Utils.getLong(frame.intArguments, 1))));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("IllegalAccessException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalAccessException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalAccessException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("IllegalArgumentException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalArgumentException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalArgumentException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("IllegalMonitorStateException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalMonitorStateException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalMonitorStateException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("IllegalThreadStateException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalThreadStateException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new IllegalThreadStateException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("IndexOutOfBoundsException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new IndexOutOfBoundsException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new IndexOutOfBoundsException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("InstantiationException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new InstantiationException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new InstantiationException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Integer".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], frame.intArguments[1]);
+                    return true;
+                } else if ("InterruptedException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new InterruptedException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new InterruptedException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Long".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], getLong(frame.intArguments, 1));
+                    return true;
+                } else if ("NegativeArraySizeException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new NegativeArraySizeException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new NegativeArraySizeException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("NoClassDefFoundError".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new NoClassDefFoundError());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new NoClassDefFoundError((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("NullPointerException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new NullPointerException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new NullPointerException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("NumberFormatException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new NumberFormatException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new NumberFormatException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("OutOfMemoryError".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new OutOfMemoryError());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new OutOfMemoryError((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("RuntimeException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new RuntimeException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new RuntimeException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("SecurityException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new SecurityException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new SecurityException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Short".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], (short) frame.intArguments[1]);
+                    return true;
+                } else if ("String".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], "");
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], (String) frame.objectArguments[1]);
+                            return true;
+                        case "([C)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((char[]) frame.objectArguments[1]));
+                            return true;
+                        case "([CII)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((char[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]));
+                            return true;
+                        case "([BIILjava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3], (String) frame.objectArguments[4]));
+                            return true;
+                        case "([BLjava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((byte[]) frame.objectArguments[1], (String) frame.objectArguments[2]));
+                            return true;
+                        case "([BII)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]));
+                            return true;
+                        case "([B)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((byte[]) frame.objectArguments[1]));
+                            return true;
+                        case "(Ljava/lang/StringBuffer;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new String((StringBuffer) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("StringBuffer".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new StringBuffer());
+                            return true;
+                        case "(I)V":
+                            replaceObjects(frame, frame.objectArguments[0], new StringBuffer(frame.intArguments[1]));
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new StringBuffer((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("StringIndexOutOfBoundsException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new StringIndexOutOfBoundsException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new StringIndexOutOfBoundsException((String) frame.objectArguments[1]));
+                            return true;
+                        case "(I)V":
+                            replaceObjects(frame, frame.objectArguments[0], new StringIndexOutOfBoundsException(frame.intArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("Throwable".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new Throwable());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new Throwable((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+                break;
+            case "java/io":
+                if ("ByteArrayInputStream".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "([B)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ByteArrayInputStream((byte[]) frame.objectArguments[1]));
+                            return true;
+                        case "([BII)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ByteArrayInputStream((byte[]) frame.objectArguments[1], frame.intArguments[2], frame.intArguments[3]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("ByteArrayOutputStream".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new ByteArrayOutputStream());
+                            return true;
+                        case "(I)V":
+                            replaceObjects(frame, frame.objectArguments[0], new ByteArrayOutputStream(frame.intArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("DataInputStream".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], new DataInputStream((InputStream) frame.objectArguments[1]));
+                    return true;
+                } else if ("DataOutputStream".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], new DataOutputStream((OutputStream) frame.objectArguments[1]));
+                    return true;
+                } else if ("EOFException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new EOFException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new EOFException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("InputStreamReader".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "(Ljava/io/InputStream;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new InputStreamReader((InputStream) frame.objectArguments[1]));
+                            return true;
+                        case "(Ljava/io/InputStream;Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new InputStreamReader((InputStream) frame.objectArguments[1], (String) frame.objectArguments[2]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("InterruptedIOException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new InterruptedIOException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new InterruptedIOException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("IOException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new IOException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new IOException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("OutputStreamWriter".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "(Ljava/io/OutputStream;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new OutputStreamWriter((OutputStream) frame.objectArguments[1]));
+                            return true;
+                        case "(Ljava/io/OutputStream;Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new OutputStreamWriter((OutputStream) frame.objectArguments[1], (String) frame.objectArguments[2]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("PrintStream".equals(className) && "<init>".equals(methodName)) {
+                    replaceObjects(frame, frame.objectArguments[0], new PrintStream((OutputStream) frame.objectArguments[1]));
+                    return true;
+                } else if ("UnsupportedEncodingException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new UnsupportedEncodingException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new UnsupportedEncodingException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                } else if ("UTFDataFormatException".equals(className)) {
+                    switch (methodDescriptor) {
+                        case "()V":
+                            replaceObjects(frame, frame.objectArguments[0], new UTFDataFormatException());
+                            return true;
+                        case "(Ljava/lang/String;)V":
+                            replaceObjects(frame, frame.objectArguments[0], new UTFDataFormatException((String) frame.objectArguments[1]));
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+                break;
+        }
 		// }
 		// replace existing classes to add special code
 		if ("java/lang".equals(packageName)) {
@@ -2658,16 +2728,17 @@ public class VirtualMachine {
 				replaceObjects(frame, frame.objectArguments[0], new Object());
 				return true;
 			} else if ("Thread".equals(className)) {
-				if ("()V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Thread(frame.thread.vm, "thread"));
-					return true;
-				} else if ("(Ljava/lang/Runnable;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Thread(frame.thread.vm, (Instance)frame.objectArguments[1]));
-					return true;
-				} else if ("(Ljava/lang/Runnable;Ljava/lang/String;)V".equals(methodDescriptor)) {
-					replaceObjects(frame, frame.objectArguments[0], new Thread(frame.thread.vm, (Instance)frame.objectArguments[1], (String)frame.objectArguments[2]));
-					return true;
-				}
+                switch (methodDescriptor) {
+                    case "()V":
+                        replaceObjects(frame, frame.objectArguments[0], new Thread(frame.thread.vm, "thread"));
+                        return true;
+                    case "(Ljava/lang/Runnable;)V":
+                        replaceObjects(frame, frame.objectArguments[0], new Thread(frame.thread.vm, (Instance) frame.objectArguments[1]));
+                        return true;
+                    case "(Ljava/lang/Runnable;Ljava/lang/String;)V":
+                        replaceObjects(frame, frame.objectArguments[0], new Thread(frame.thread.vm, (Instance) frame.objectArguments[1], (String) frame.objectArguments[2]));
+                        return true;
+                }
 			}
 		}
 		throw new VirtualMachineException("not implemented");

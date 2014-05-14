@@ -30,19 +30,18 @@ final class Instance {
 
 	Object parentInstance;
 
-	private final Hashtable fieldsOfClasses = new Hashtable();
+	private final Hashtable<String, Hashtable<String, Field>> fieldsOfClasses = new Hashtable<>();
 
 	Instance(final Clazz clazz) {
 		this.clazz = clazz;
 
 		Clazz current = clazz;
 		do {
-			Hashtable fields = new Hashtable();
+			Hashtable<String, Field> fields = new Hashtable<>();
 			Field[] currentFields = current.instanceFields;
-			for (int i = 0, length = currentFields.length; i < length; i++) {
-				Field field = currentFields[i];
-				fields.put(field.name, field.copy());
-			}
+            for (Field field : currentFields) {
+                fields.put(field.name, field.copy());
+            }
 			fieldsOfClasses.put(current.name, fields);
 			current = current.classLoader.loadClass(current.superClass);
 		} while (current != null);

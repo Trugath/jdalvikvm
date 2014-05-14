@@ -37,7 +37,7 @@ public class ThreadReentrantSynchronizedBlockTest {
 		System.out.println(add(0));
 	}
 
-	private static Object mutex = new Object();
+	private final static Object mutex = new Object();
 	private static int field;
 
 	private static int add(int value) {

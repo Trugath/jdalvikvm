@@ -40,17 +40,17 @@ final strictfp class Thread {
 
 	final VirtualMachine vm;
 
-	private final Vector frames = new Vector();
+	private final Vector<Frame> frames = new Vector<>();
 	private int currentFrame = -1;
 
 	int status = STATUS_NOT_STARTED;
 	long wakeUpTime = 0;
 	Object monitorToResume;
-	private final Vector monitorList = new Vector();
+	private final Vector<Object> monitorList = new Vector<>();
 
 	private int priority = java.lang.Thread.NORM_PRIORITY;
 	final String name;
-	private Vector joinedThreads = new Vector();
+	private Vector<Thread> joinedThreads = new Vector<>();
 
 	Thread(final VirtualMachine vm, final String name) {
 		this.vm = vm;
@@ -2901,9 +2901,7 @@ final strictfp class Thread {
 
 	void releaseLock(final Object instance) {
 		monitorList.removeElementAt(monitorList.size() - 1);
-		if (monitorList.contains(instance)) {
-			return;
-		} else {
+		if (!monitorList.contains(instance)) {
 			for (int i = 0, length = vm.threads.size(); i < length; i++) {
 				Thread thread = (Thread)vm.threads.elementAt(i);
 				if (thread != this && thread.status == STATUS_WAIT_FOR_MONITOR && thread.monitorToResume == instance) {
