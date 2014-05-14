@@ -334,9 +334,9 @@ final strictfp class Thread {
 						// const-wide vAA, #+BBBBBBBBBBBBBBBB
 						int destination = upperCodes[frame.pc++];
 						long value = codes[frame.pc++];
-						value |= codes[frame.pc++] << 16;
-						value |= codes[frame.pc++] << 32;
-						value |= codes[frame.pc++] << 48;
+						value |= (long)codes[frame.pc++] << 16;
+						value |= (long)codes[frame.pc++] << 32;
+						value |= (long)codes[frame.pc++] << 48;
 						Utils.setLong(frame.intRegisters, destination, value);
 						frame.isObjectRegister[destination] = false;
 						break;
