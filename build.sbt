@@ -2,7 +2,7 @@ name := "jdalvikvm"
 
 organization := "com.github.trugath"
 
-version := "0.8"
+version := "0.8.1"
 
 scalaVersion := "2.11.0"
 
