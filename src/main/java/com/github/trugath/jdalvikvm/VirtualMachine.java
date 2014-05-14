@@ -2090,7 +2090,7 @@ public class VirtualMachine {
                 switch (className) {
                     case "Predef$":
                         if ("println".equals(methodName) && "(Ljava/lang/Object;)V".equals(methodDescriptor)) {
-                            ((Predef$) toTargetInstance(frame.objectArguments[0])).println(frame.objectArguments[1]);
+                            System.out.println((Object)frame.objectArguments[1]);
                             return true;
                         }
                 }
